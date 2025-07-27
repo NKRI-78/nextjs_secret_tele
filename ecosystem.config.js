@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "nextjs-secret-app",
+      name: "nextjs-secret-tele",
       script: "npm",
       args: "run start",
       env: {
