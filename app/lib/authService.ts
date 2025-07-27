@@ -1,13 +1,12 @@
 import axios from "axios";
 import Swal from "sweetalert2";
-import Cookies from "js-cookie";
 
 export const Login = async (val: string, password: string) => {
   try {
     const response = await axios.post(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/v1/auth/login`,
+      `https://api-sabi.langitdigital78.com/api/v1/auth`,
       {
-        val: val,
+        email: val,
         password: password,
       }
     );
