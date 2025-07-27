@@ -2,7 +2,6 @@ import { configureStore } from "@reduxjs/toolkit";
 
 import modalReducer from "@redux/slices/modalSlice";
 import profileReducer from "@redux/slices/profileSlice";
-import productReducer from "@redux/slices/productSlice";
 import authReducer from "@redux/slices/authSlice";
 import chatReducer from "@redux/slices/chatSlice";
 
@@ -15,7 +14,6 @@ export const store = configureStore({
     auth: authReducer,
     chat: chatReducer,
     modal: modalReducer,
-    product: productReducer,
     profile: profileReducer,
   },
 });
