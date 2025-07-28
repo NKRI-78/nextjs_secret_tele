@@ -131,7 +131,11 @@ const Chat = () => {
 
       <div className="flex-1 overflow-y-auto space-y-3 mb-6 px-2">
         {[...messages]
-          .filter((msg) => msg.text && msg.text.trim() !== "")
+          .filter(
+            (msg) =>
+              (msg.text && msg.text.trim() !== "") ||
+              msg.mime_type === "image/jpeg"
+          )
           .sort(
             (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
           )
@@ -150,13 +154,13 @@ const Chat = () => {
                 }`}
                 style={{ wordBreak: "break-word" }}
               >
-                {msg.text}
+                {msg.text && <div>{msg.text}</div>}
 
                 {msg.mime_type === "image/jpeg" && (
                   <img
                     src={`https://api.rahasia.langitdigital78.com/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
                     alt="Preview"
-                    className="max-w-full max-h-full rounded-lg shadow-lg"
+                    className="max-w-full max-h-full rounded-lg shadow-lg mt-2"
                     onClick={(e) => e.stopPropagation()}
                   />
                 )}
@@ -164,7 +168,7 @@ const Chat = () => {
                 <div
                   className={`text-[10px] ${
                     msg.username === username ? "text-white" : "text-gray-400"
-                  }  mt-1 text-right select-none`}
+                  } mt-1 text-right select-none`}
                 >
                   {new Date(msg.date).toLocaleTimeString([], {
                     hour: "2-digit",
