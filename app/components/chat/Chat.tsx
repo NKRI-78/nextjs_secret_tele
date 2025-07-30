@@ -8,7 +8,7 @@ import { Message } from "@/app/interfaces/chat/chat";
 import { io, Socket } from "socket.io-client";
 
 // Connect to Socket.IO server (update the URL to match your backend)
-const socket: Socket = io("http://103.174.115.238:8001"); // Replace with your backend address
+const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET); // Replace with your backend address
 
 const Chat = () => {
   const dispatch = useDispatch<AppDispatch>();
