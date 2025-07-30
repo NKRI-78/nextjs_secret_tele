@@ -17,11 +17,12 @@ export const ChatList = async () => {
   }
 };
 
-export const SendMessage = async (msg: string) => {
+export const SendMessage = async (formData: FormData) => {
   try {
-    await api.post(`/send`, {
-      chat: "@squad_ibot",
-      message: msg,
+    await api.post(`/send`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
     });
   } catch (e: any) {
     Swal.fire({

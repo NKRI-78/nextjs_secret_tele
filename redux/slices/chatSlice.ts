@@ -9,8 +9,8 @@ export const chatListAsync = createAsyncThunk("chat/list", async () => {
 
 export const sendMsgAsync = createAsyncThunk(
   "chat/send",
-  async ({ msg }: { msg: string }) => {
-    await SendMessage(msg);
+  async ({ formData: FormData }: { formData: FormData }) => {
+    await SendMessage(FormData);
   }
 );
 

@@ -7,8 +7,7 @@ import { AppDispatch, RootState } from "@/redux/store";
 import { Message } from "@/app/interfaces/chat/chat";
 import { io, Socket } from "socket.io-client";
 
-// Connect to Socket.IO server (update the URL to match your backend)
-const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET); // Replace with your backend address
+const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET);
 
 const Chat = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -21,10 +20,22 @@ const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
 
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatId = 655325290;
   const userId = 1496400227;
   const username = "saya";
+
+  const cleanText = (text: string): string => {
+    return text
+      .replace(/```/g, "") // remove backticks (```)
+      .replace(/\*\*/g, "") // remove bold (**)
+      .replace(/^-+/gm, "") // remove markdown-style separators
+      .replace(/=+@=|=@=-?/g, "") // remove specific custom markers
+      .trim(); // remove leading/trailing spaces
+  };
 
   // Load initial messages from Redux
   useEffect(() => {
@@ -48,6 +59,21 @@ const Chat = () => {
       setMessages(incomingMessages);
     }
   }, [chatData]);
+
+  const handleFileUpload = (file: File) => {
+    setUploadedFile(file);
+
+    // Preview for image
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setPreviewUrl(null); // no preview for non-image files
+    }
+  };
 
   // Auto scroll
   useEffect(() => {
@@ -88,7 +114,6 @@ const Chat = () => {
     };
   }, []);
 
-  // Send message
   const handleSend = () => {
     if (!input.trim()) return;
 
@@ -106,13 +131,19 @@ const Chat = () => {
 
     setMessages((prev) => [...prev, userMessage]);
 
-    // Persist to backend
-    dispatch(sendMsgAsync({ msg: input.trim() }));
+    const formData = new FormData();
+    if (uploadedFile) {
+      formData.append("file", uploadedFile);
+    }
+    formData.append("chat", "@squad_ibot");
+    formData.append("message", input.trim());
 
-    // Emit via socket (optional)
+    dispatch(sendMsgAsync({ formData }));
+
     socket.emit("message:send", userMessage);
 
     setInput("");
+    setUploadedFile(null);
   };
 
   return (
@@ -154,11 +185,13 @@ const Chat = () => {
                 }`}
                 style={{ wordBreak: "break-word" }}
               >
-                {msg.text && <div>{msg.text}</div>}
+                {msg.text && (
+                  <div className="whitespace-pre-wrap">{msg.text}</div>
+                )}
 
                 {msg.mime_type === "image/jpeg" && (
                   <img
-                    src={`https://api.rahasia.langitdigital78.com/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
+                    src={`${process.env.NEXT_PUBLIC_BASE_URL}/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
                     alt="Preview"
                     className="max-w-full max-h-full rounded-lg shadow-lg mt-2"
                     onClick={(e) => e.stopPropagation()}
@@ -181,7 +214,47 @@ const Chat = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center gap-4 border p-2 rounded-md bg-gray-50">
+        {/* Preview section */}
+        {uploadedFile && (
+          <div className="flex items-center space-x-4 border p-2 rounded-md bg-gray-50">
+            {previewUrl ? (
+              <img
+                src={previewUrl}
+                alt="preview"
+                className="w-16 h-16 object-cover rounded"
+              />
+            ) : (
+              <div className="text-gray-700">📎 {uploadedFile.name}</div>
+            )}
+            <button
+              onClick={() => {
+                setUploadedFile(null);
+                setPreviewUrl(null);
+              }}
+              className="text-red-500 hover:underline text-sm"
+            >
+              Remove
+            </button>
+          </div>
+        )}
+
+        {/* File upload */}
+        <label className="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md">
+          📎
+          <input
+            type="file"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files![0];
+              if (file) {
+                handleFileUpload(file); // Define this function in your component
+              }
+            }}
+          />
+        </label>
+
+        {/* Text input */}
         <input
           type="text"
           value={input}
@@ -190,6 +263,8 @@ const Chat = () => {
           className="flex-1 border rounded-md px-3 py-2"
           placeholder="Type a message..."
         />
+
+        {/* Send button */}
         <button
           onClick={handleSend}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
