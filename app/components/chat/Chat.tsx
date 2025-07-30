@@ -8,7 +8,7 @@ import { Message } from "@/app/interfaces/chat/chat";
 import { io, Socket } from "socket.io-client";
 
 // Connect to Socket.IO server (update the URL to match your backend)
-const socket: Socket = io("https://socket.rahasia.langitdigital78.com"); // Replace with your backend address
+const socket: Socket = io("http://103.174.115.238:8001"); // Replace with your backend address
 
 const Chat = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -22,9 +22,9 @@ const Chat = () => {
   const [input, setInput] = useState("");
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatId = 655325290; // This could be dynamic if needed
+  const chatId = 655325290;
   const userId = 1496400227;
-  const username = "rahmadfani";
+  const username = "saya";
 
   // Load initial messages from Redux
   useEffect(() => {

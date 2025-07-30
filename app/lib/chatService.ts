@@ -3,7 +3,7 @@ import api from "./axios";
 
 export const ChatList = async () => {
   try {
-    const response = await api.get(`/messages/@reihnagm?limit=10`);
+    const response = await api.get(`/messages/@squad_ibot?limit=10`);
     const data = response.data;
     return data;
   } catch (e: any) {
@@ -20,7 +20,7 @@ export const ChatList = async () => {
 export const SendMessage = async (msg: string) => {
   try {
     await api.post(`/send`, {
-      chat: "@reihnagm",
+      chat: "@squad_ibot",
       message: msg,
     });
   } catch (e: any) {
