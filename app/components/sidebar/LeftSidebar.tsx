@@ -15,7 +15,6 @@ const LeftSidebar: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const fullname = useSelector((state: RootState) => state.profile.fullname);
   const pathname = usePathname();
-  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     dispatch(GetProfileAsync());

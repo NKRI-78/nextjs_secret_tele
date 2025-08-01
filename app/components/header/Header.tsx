@@ -1,5 +1,4 @@
 import { usePathname } from "next/navigation";
-import { useDispatch } from "react-redux";
 
 const SearchBar = () => {
   const pathname = usePathname();

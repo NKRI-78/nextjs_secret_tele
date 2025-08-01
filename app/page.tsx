@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import Chat from "./components/chat/Chat";
+
+import BottomNavbar from "@components/bottom/Navbar";
+import FeatureMenu from "@components/feature/Menu";
 
 export const metadata: Metadata = {
   title: "Chats",
@@ -7,7 +9,12 @@ export const metadata: Metadata = {
 };
 
 const HomePage: React.FC = () => {
-  return <Chat></Chat>;
+  return (
+    <div className="relative w-[90%] md:w-[40%] min-h-screen bg-gray-100">
+      <FeatureMenu />
+      <BottomNavbar />
+    </div>
+  );
 };
 
 export default HomePage;

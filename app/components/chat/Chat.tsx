@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { chatListAsync, sendMsgAsync } from "@/redux/slices/chatSlice";
-import { AppDispatch, RootState } from "@/redux/store";
-import { Message } from "@/app/interfaces/chat/chat";
+import { chatListAsync, sendMsgAsync } from "@redux/slices/chatSlice";
+import { AppDispatch, RootState } from "@redux/store";
+import { Message } from "@interfaces/chat/chat";
 import { io, Socket } from "socket.io-client";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET);
 
-const Chat = () => {
+const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     data: chatData,
@@ -28,21 +28,17 @@ const Chat = () => {
   const userId = 1496400227;
   const username = "saya";
 
-  const cleanText = (text: string): string => {
-    return text
-      .replace(/```/g, "") // remove backticks (```)
-      .replace(/\*\*/g, "") // remove bold (**)
-      .replace(/^-+/gm, "") // remove markdown-style separators
-      .replace(/=+@=|=@=-?/g, "") // remove specific custom markers
-      .trim(); // remove leading/trailing spaces
-  };
+  // Command
+  // useEffect(() => {
+  //   if (selectedCommand) {
+  //     setInput(selectedCommand + " ");
+  //   }
+  // }, [selectedCommand]);
 
-  // Load initial messages from Redux
-  useEffect(() => {
-    dispatch(chatListAsync());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(chatListAsync());
+  // }, [dispatch]);
 
-  // Update local messages when Redux data changes
   useEffect(() => {
     if (chatData?.messages) {
       const incomingMessages: Message[] = chatData.messages.map((msg) => ({
@@ -63,7 +59,6 @@ const Chat = () => {
   const handleFileUpload = (file: File) => {
     setUploadedFile(file);
 
-    // Preview for image
     if (file.type.startsWith("image/")) {
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -71,21 +66,17 @@ const Chat = () => {
       };
       reader.readAsDataURL(file);
     } else {
-      setPreviewUrl(null); // no preview for non-image files
+      setPreviewUrl(null);
     }
   };
 
-  // Auto scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Socket.IO connection
   useEffect(() => {
-    // Join the lobby room
     socket.emit("room:lobby:join", chatId);
 
-    // Listen for 'bot_msg' from the server
     socket.on("bot_msg", (msg: any) => {
       try {
         const parsed: Message = JSON.parse(msg);
@@ -215,7 +206,6 @@ const Chat = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 border p-2 rounded-md bg-gray-50">
-        {/* Preview section */}
         {uploadedFile && (
           <div className="flex items-center space-x-4 border p-2 rounded-md bg-gray-50">
             {previewUrl ? (
@@ -239,7 +229,6 @@ const Chat = () => {
           </div>
         )}
 
-        {/* File upload */}
         <label className="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md">
           📎
           <input
@@ -248,28 +237,25 @@ const Chat = () => {
             onChange={(e) => {
               const file = e.target.files![0];
               if (file) {
-                handleFileUpload(file); // Define this function in your component
+                handleFileUpload(file);
               }
             }}
           />
         </label>
 
-        {/* Text input */}
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
           className="flex-1 border rounded-md px-3 py-2"
-          placeholder="Type a message..."
         />
 
-        {/* Send button */}
         <button
           onClick={handleSend}
           className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          Send
+          Search
         </button>
       </div>
     </div>
