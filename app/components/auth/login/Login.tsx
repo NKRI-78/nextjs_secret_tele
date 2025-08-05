@@ -33,6 +33,12 @@ const Login: React.FC = () => {
 
     const result = await dispatch(loginAdminAsync({ val, password })).unwrap();
 
+    Cookies.set("username", result.data.username, {
+      expires: 365,
+      secure: true,
+      sameSite: "strict",
+    });
+
     Cookies.set("token", result.data.token, {
       expires: 365,
       secure: true,

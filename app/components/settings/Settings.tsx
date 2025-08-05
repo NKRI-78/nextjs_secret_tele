@@ -1,34 +1,22 @@
 "use client";
+
+import Cookies from "js-cookie";
+
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { FiLogOut } from "react-icons/fi";
 import { FaUserCircle } from "react-icons/fa";
+import { getUserName } from "@/app/lib/utils";
 
 const Settings = () => {
-  const [user, setUser] = useState<{
-    username: string;
-    avatar?: string;
-  } | null>(null);
-
-  useEffect(() => {
-    const mockUser = {
-      username: "inovatif78",
-      avatar: "",
-    };
-    setUser(mockUser);
-  }, []);
+  const router = useRouter();
 
   const handleLogout = () => {
-    console.log("Logging out...");
-    setUser(null);
-  };
+    Cookies.remove("token");
+    Cookies.remove("user_id");
 
-  if (!user) {
-    return (
-      <div className="p-4 mt-6 text-center text-gray-600 text-sm">
-        Anda belum login.
-      </div>
-    );
-  }
+    router.push("/auth/login");
+  };
 
   return (
     <div className="w-full my-4 mx-4">
@@ -38,7 +26,7 @@ const Settings = () => {
         <FaUserCircle className="w-14 h-14 text-gray-400" />
         <div>
           <p className="text-sm text-gray-600">Username</p>
-          <p className="text-base font-semibold">{user.username}</p>
+          <p className="text-base font-semibold">{getUserName()}</p>
         </div>
       </div>
 

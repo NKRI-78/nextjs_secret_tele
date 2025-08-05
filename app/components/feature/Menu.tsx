@@ -67,11 +67,11 @@ const FeatureMenu: React.FC = () => {
         <Settings />
       ) : (
         <div>
+          <h1 className="text-xl font-bold text-center my-6">
+            Fitur {feature}
+          </h1>
           {!feature ? (
             <>
-              <h1 className="text-xl font-bold text-center my-6">
-                Fitur {feature}
-              </h1>
               <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                 {features.map((item, idx) => (
                   <div

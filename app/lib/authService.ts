@@ -11,6 +11,7 @@ export const Login = async (val: string, password: string) => {
       }
     );
     const data = response.data;
+    console.log(data);
     return data;
   } catch (e: any) {
     Swal.fire({
