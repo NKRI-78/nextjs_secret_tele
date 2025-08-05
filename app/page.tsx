@@ -4,8 +4,8 @@ import BottomNavbar from "@components/bottom/Navbar";
 import FeatureMenu from "@components/feature/Menu";
 
 export const metadata: Metadata = {
-  title: "Chats",
-  description: "Chats",
+  title: "Bot",
+  description: "Bot",
 };
 
 const HomePage: React.FC = () => {

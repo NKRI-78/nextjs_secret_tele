@@ -9,7 +9,7 @@ import { io, Socket } from "socket.io-client";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET);
 
-const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
+const ChatAdmin = () => {
   const dispatch = useDispatch<AppDispatch>();
   const {
     data: chatData,
@@ -27,12 +27,6 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
   const chatId = 655325290;
   const userId = 1496400227;
   const username = "saya";
-
-  useEffect(() => {
-    if (selectedCommand) {
-      setInput(`/${selectedCommand} `);
-    }
-  }, [selectedCommand]);
 
   // useEffect(() => {
   //   dispatch(chatListAsync());
@@ -261,4 +255,4 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
   );
 };
 
-export default Chat;
+export default ChatAdmin;

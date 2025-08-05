@@ -9,9 +9,7 @@ export const metadata: Metadata = {
 };
 
 const ProfilePage: React.FC = () => {
-  return (
-    <Profile />
-  );
+  return <Profile />;
 };
 
 export default ProfilePage;

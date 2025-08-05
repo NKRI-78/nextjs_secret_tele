@@ -2,23 +2,25 @@
 
 import {
   FaIdCard,
-  FaUserPlus,
   FaUsers,
   FaMapMarkerAlt,
-  FaWallet,
   FaBolt,
+  FaUser,
+  FaSearch,
+  FaFileMedical,
+  FaBookMedical,
+  FaImage,
+  FaPhone,
+  FaInfo,
 } from "react-icons/fa";
 
 import {
   MdDirectionsCar,
   MdSimCard,
   MdSettings,
-  MdPhoneIphone,
   MdPhoneAndroid,
 } from "react-icons/md";
 
-import { AiFillCreditCard } from "react-icons/ai";
-import { BsQrCodeScan } from "react-icons/bs";
 import Chat from "@components/chat/Chat";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@redux/store";
@@ -27,27 +29,16 @@ import Settings from "../settings/Settings";
 
 const features = [
   { label: "NIK", icon: <FaIdCard />, command: "nik" },
-  { label: "REGISTER", icon: <FaUserPlus />, command: "register" },
-  { label: "CEK KK", icon: <FaUsers />, command: "cek-kk" },
-  { label: "CEK POS", icon: <FaMapMarkerAlt />, command: "cek-pos" },
-  { label: "TRACE NIK", icon: <MdSettings />, command: "trace-nik" },
+  { label: "CEK KK", icon: <FaUsers />, command: "kk" },
+  { label: "CEK POS", icon: <FaMapMarkerAlt />, command: "cp" },
   { label: "NOPOL", icon: <MdDirectionsCar />, command: "nopol" },
   { label: "NOKA", icon: <MdSimCard />, command: "noka" },
   { label: "NOSIN", icon: <MdSettings />, command: "nosin" },
-  { label: "PLN", icon: <FaBolt />, command: "pln" },
-  { label: "TRACE IMEI", icon: <MdPhoneAndroid />, command: "trace-wifi" },
-  { label: "E-WALLET", icon: <FaWallet />, command: "e-wallet" },
-  {
-    label: "CEK REKENING",
-    icon: <AiFillCreditCard />,
-    command: "cek-rekening",
-  },
-  { label: "IMEI 2 PHONE", icon: <MdPhoneIphone />, command: "ime2-phone" },
-  { label: "PHONE 2 IMEI", icon: <BsQrCodeScan />, command: "phone2-imei" },
-  { label: "GSM TRACKER", icon: <MdSettings />, command: "gsm-tracker" },
-  { label: "BILL", icon: <AiFillCreditCard />, command: "bill" },
-  { label: "PHISHING", icon: <MdSettings />, command: "phishing" },
-  { label: "CEK IMEI", icon: <MdSimCard />, command: "cek-imei" },
+  { label: "NAMA", icon: <FaSearch />, command: "nama" },
+  { label: "FR", icon: <FaImage />, command: "fr" },
+  { label: "PHONE", icon: <FaPhone />, command: "phone" },
+  { label: "HP2NIK", icon: <FaIdCard />, command: "hp2nik" },
+  { label: "INFO", icon: <FaInfo />, command: "info" },
 ];
 
 const FeatureMenu: React.FC = () => {
