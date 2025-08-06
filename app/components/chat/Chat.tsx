@@ -211,7 +211,7 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
       contentType = "media";
     }
 
-    let msg: any = {
+    const msg: any = {
       sender_id: "2",
       receiver_id: "1",
       media: media,
