@@ -4,22 +4,13 @@ import {
   FaIdCard,
   FaUsers,
   FaMapMarkerAlt,
-  FaBolt,
-  FaUser,
   FaSearch,
-  FaFileMedical,
-  FaBookMedical,
   FaImage,
   FaPhone,
   FaInfo,
 } from "react-icons/fa";
 
-import {
-  MdDirectionsCar,
-  MdSimCard,
-  MdSettings,
-  MdPhoneAndroid,
-} from "react-icons/md";
+import { MdDirectionsCar, MdSimCard, MdSettings } from "react-icons/md";
 
 import Chat from "@components/chat/Chat";
 import { useDispatch, useSelector } from "react-redux";

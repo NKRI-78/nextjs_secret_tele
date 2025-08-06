@@ -1,11 +1,19 @@
 import { LoginModel } from "@/app/interfaces/auth/login";
-import { Login } from "@lib/authService";
+import { Login, LoginBotSecret } from "@lib/authService";
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export const loginAdminAsync = createAsyncThunk(
   "auth/login",
   async ({ val, password }: { val: string; password: string }) => {
     const response = await Login(val, password);
+    return response;
+  }
+);
+
+export const loginBotSecretAsync = createAsyncThunk(
+  "auth/login-bot-secret",
+  async ({ val, password }: { val: string; password: string }) => {
+    const response = await LoginBotSecret(val, password);
     return response;
   }
 );

@@ -22,3 +22,25 @@ export const Login = async (val: string, password: string) => {
     });
   }
 };
+
+export const LoginBotSecret = async (username: string, password: string) => {
+  try {
+    const response = await axios.post(
+      `https://socketio-capbridge.langitdigital78.com/login-bot-secret`,
+      {
+        username: username,
+        password: password,
+      }
+    );
+    const data = response.data;
+    return data;
+  } catch (e: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: e?.response?.data?.message || e.message,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  }
+};

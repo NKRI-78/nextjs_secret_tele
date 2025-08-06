@@ -12,6 +12,7 @@ import {
   setVal,
   setPassword,
   setShowPassword,
+  loginBotSecretAsync,
 } from "@redux/slices/authSlice";
 
 import { FaEye, FaEyeSlash } from "react-icons/fa";
@@ -31,7 +32,7 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const result = await dispatch(loginAdminAsync({ val, password })).unwrap();
+    const result = await dispatch(loginBotSecretAsync({ val, password })).unwrap();
 
     Cookies.set("username", result.data.username, {
       expires: 365,
