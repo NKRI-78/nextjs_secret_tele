@@ -42,7 +42,7 @@ const ChatAdmin = () => {
     };
 
     fetchIfVisible();
-    const interval = setInterval(fetchIfVisible, 5000);
+    const interval = setInterval(fetchIfVisible, 3000);
 
     return () => clearInterval(interval);
   }, [dispatch]);

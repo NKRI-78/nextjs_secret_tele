@@ -74,7 +74,7 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
     };
 
     fetchIfVisible();
-    const interval = setInterval(fetchIfVisible, 5000);
+    const interval = setInterval(fetchIfVisible, 3000);
 
     return () => clearInterval(interval);
   }, [dispatch]);
