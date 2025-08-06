@@ -42,10 +42,23 @@ const ChatAdmin = () => {
     };
 
     fetchIfVisible();
-    const interval = setInterval(fetchIfVisible, 3000);
+    const interval = setInterval(fetchIfVisible, 5000);
 
     return () => clearInterval(interval);
   }, [dispatch]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const prevLengthRef = useRef(0);
+
+  useEffect(() => {
+    if (messages.length !== prevLengthRef.current) {
+      scrollToBottom();
+      prevLengthRef.current = messages.length;
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (answer) {
@@ -63,9 +76,13 @@ const ChatAdmin = () => {
       const incomingMessages: AnswerItem[] = answer.map((msg) => ({
         answer_id: msg.answer_id,
         answer_content: msg.answer_content,
+        answer_content_type: msg.answer_content_type,
+        answer_media: msg.answer_media,
         answer_time: msg.answer_time,
         request_id: msg.request_id,
         request_content: msg.request_content,
+        request_content_type: msg.request_content_type,
+        request_media: msg.request_media,
         request_receiver: msg.request_receiver,
         request_sender: msg.request_sender,
         request_time: msg.request_time,
@@ -105,9 +122,9 @@ const ChatAdmin = () => {
     }
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messages]);
 
   // useEffect(() => {
   //   socket.emit("room:lobby:join", chatId);
@@ -141,7 +158,7 @@ const ChatAdmin = () => {
 
   const handleSubmit = () => {
     const hasUnansweredRequest = answer.some(
-      (item) => item.request_receiver === 2 && !item.answer_content
+      (item) => item.request_sender === 2 && !item.answer_content
     );
 
     if (!hasUnansweredRequest) {

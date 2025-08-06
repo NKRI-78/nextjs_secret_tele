@@ -60,6 +60,8 @@ export const AskAnswer = async (data: any) => {
         sender_id: data.sender_id,
         receiver_id: data.receiver_id,
         content: data.content,
+        content_type: data.content_type,
+        media: data.media,
         prefix: data.prefix,
         type: data.type,
       }

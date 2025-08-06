@@ -8,12 +8,13 @@ import {
   sendMsgAsync,
 } from "@redux/slices/chatSlice";
 import { AppDispatch, RootState } from "@redux/store";
-import { Message } from "@interfaces/chat/chat";
-import { io, Socket } from "socket.io-client";
+// import { Message } from "@interfaces/chat/chat";
+// import { io, Socket } from "socket.io-client";
 import { AnswerItem } from "@/app/interfaces/botsecret/answer";
 import Swal from "sweetalert2";
+import { UploadFile } from "@/app/lib/mediaService";
 
-const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET);
+// const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET);
 
 const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -32,9 +33,13 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const chatId = 655325290;
-  const userId = 1496400227;
-  const username = "saya";
+
+  let media: string = "";
+  let contentType: string = "text";
+
+  // const chatId = 655325290;
+  // const userId = 1496400227;
+  // const username = "saya";
 
   useEffect(() => {
     if (selectedCommand) {
@@ -69,19 +74,36 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
     };
 
     fetchIfVisible();
-    const interval = setInterval(fetchIfVisible, 3000);
+    const interval = setInterval(fetchIfVisible, 5000);
 
     return () => clearInterval(interval);
   }, [dispatch]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const prevLengthRef = useRef(0);
+
+  useEffect(() => {
+    if (messages.length !== prevLengthRef.current) {
+      scrollToBottom();
+      prevLengthRef.current = messages.length;
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (answer) {
       const incomingMessages: AnswerItem[] = answer.map((msg) => ({
         answer_id: msg.answer_id,
         answer_content: msg.answer_content,
+        answer_content_type: msg.answer_content_type,
+        answer_media: msg.answer_media,
         answer_time: msg.answer_time,
         request_id: msg.request_id,
         request_content: msg.request_content,
+        request_content_type: msg.request_content_type,
+        request_media: msg.request_media,
         request_receiver: msg.request_receiver,
         request_sender: msg.request_sender,
         request_time: msg.request_time,
@@ -104,9 +126,9 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
     }
   };
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  // useEffect(() => {
+  //   messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  // }, [messages]);
 
   // useEffect(() => {
   //   socket.emit("room:lobby:join", chatId);
@@ -170,9 +192,9 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
   //   setUploadedFile(null);
   // };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const hasPendingRequest = answer.some(
-      (item) => item.request_sender === 2 && !item.answer_content // still waiting
+      (item) => item.request_sender === 2 && !item.answer_content
     );
 
     if (hasPendingRequest) {
@@ -183,15 +205,26 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
       return;
     }
 
-    const msg: any = {
+    if (uploadedFile) {
+      const response = await UploadFile(uploadedFile);
+      media = response.data.path;
+      contentType = "media";
+    }
+
+    let msg: any = {
       sender_id: "2",
       receiver_id: "1",
+      media: media,
       content: input.trim(),
+      content_type: contentType,
       prefix: selectedCommand,
       type: "request",
     };
+
     dispatch(AskAsync({ data: msg }));
     setInput("");
+    setUploadedFile(null);
+    scrollToBottom();
   };
 
   return (
@@ -226,6 +259,15 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
                   <div className="whitespace-pre-wrap">
                     {item.request_content}
                   </div>
+
+                  {item.request_media !== "" && item.request_media !== null && (
+                    <img
+                      src={`${item.request_media}`}
+                      alt="Preview"
+                      className="max-w-full max-h-full rounded-lg shadow-lg mt-2"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  )}
                   <div className="text-[10px] text-white mt-1 text-right select-none">
                     {new Date(item.request_time).toLocaleTimeString([], {
                       hour: "2-digit",
@@ -236,7 +278,7 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
               </div>
 
               {/* Answer Message */}
-              <div className="flex justify-start">
+              <div className="flex justify-start mt-2">
                 <div
                   className="relative p-3 rounded-xl max-w-[75%] text-sm font-sans leading-snug shadow-md bg-gray-100 text-gray-900 rounded-bl-none"
                   style={{ wordBreak: "break-word" }}
@@ -344,20 +386,24 @@ const Chat = ({ selectedCommand = "" }: { selectedCommand?: string }) => {
           </div>
         )}
 
-        <label className="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md">
-          📎
-          <input
-            type="file"
-            className="hidden"
-            accept="image/png, image/jpeg, .gif"
-            onChange={(e) => {
-              const file = e.target.files![0];
-              if (file) {
-                handleFileUpload(file);
-              }
-            }}
-          />
-        </label>
+        {selectedCommand == "fr" ? (
+          <label className="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-md">
+            📎
+            <input
+              type="file"
+              className="hidden"
+              accept="image/png, image/jpeg, .gif"
+              onChange={(e) => {
+                const file = e.target.files![0];
+                if (file) {
+                  handleFileUpload(file);
+                }
+              }}
+            />
+          </label>
+        ) : (
+          <div></div>
+        )}
 
         <input
           type="text"

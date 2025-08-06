@@ -8,7 +8,6 @@ import { AppDispatch, RootState } from "@redux/store";
 import { useDispatch, useSelector } from "react-redux";
 
 import {
-  loginAdminAsync,
   setVal,
   setPassword,
   setShowPassword,
@@ -32,9 +31,11 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const result = await dispatch(loginBotSecretAsync({ val, password })).unwrap();
+    const result = await dispatch(
+      loginBotSecretAsync({ val, password })
+    ).unwrap();
 
-    Cookies.set("username", result.data.username, {
+    Cookies.set("username", result.data.user.name, {
       expires: 365,
       secure: true,
       sameSite: "strict",
