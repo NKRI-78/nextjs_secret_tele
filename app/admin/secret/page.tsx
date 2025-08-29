@@ -1,7 +1,6 @@
 import React from "react";
 
 import type { Metadata } from "next";
-import ChatAdmin from "@components/chat/ChatAdmin";
 
 export const metadata: Metadata = {
   title: "Bot | Secret",
@@ -9,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const AdminSecretPage: React.FC = () => {
-  return <ChatAdmin />;
+  return <></>;
 };
 
 export default AdminSecretPage;
