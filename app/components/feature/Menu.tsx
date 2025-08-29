@@ -79,7 +79,7 @@ const FeatureMenu: React.FC = () => {
               >
                 ← Kembali
               </button>
-              <Chat selectedCommand={feature} />
+              <Chat />
             </div>
           )}
         </div>
