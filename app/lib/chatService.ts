@@ -2,6 +2,24 @@ import Swal from "sweetalert2";
 import api from "./axios";
 import axios from "axios";
 
+export const ChatMessageList = async () => {
+  try {
+    const response = await api.get(
+      "http://103.174.115.238:8000/messages/@OSngrok_bot?limit=10"
+    );
+    const data = response?.data?.messages;
+    return data;
+  } catch (e: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: e?.response?.data?.message || e.message,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  }
+};
+
 export const ChatList = async () => {
   try {
     const response = await api.get(``);
@@ -37,6 +55,24 @@ export const ChatAdminList = async () => {
 export const SendMessage = async (formData: FormData) => {
   try {
     await api.post(`/send`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+  } catch (e: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: e?.response?.data?.message || e.message,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  }
+};
+
+export const SendMessageBtn = async (formData: FormData) => {
+  try {
+    await api.post("/click_button", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
