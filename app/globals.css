@@ -21,6 +21,10 @@
   margin-bottom: 0.5rem;
 }
 
+.margin-150 {
+  margin: 150px auto;
+}
+
 .richtext-justify-between {
   justify-content: end !important;
 }
@@ -43,7 +47,7 @@ p {
 }
 
 .bg-red {
-  background-color: #C82927;
+  background-color: #c82927;
 }
 
 .bg-blue {
@@ -59,16 +63,11 @@ p {
   border: 1px solid #e5e7eb !important;
 }
 
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
 }
-
-
-
-
 
 @layer base {
   :root {
@@ -125,10 +124,6 @@ p {
     --chart-5: 340 75% 55%;
   }
 }
-
-
-
-
 
 @layer base {
   * {

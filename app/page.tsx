@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import BottomNavbar from "@components/bottom/Navbar";
-import FeatureMenu from "@components/feature/Menu";
 import Chat from "./components/chat/Chat";
 
 export const metadata: Metadata = {

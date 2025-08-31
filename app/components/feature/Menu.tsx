@@ -2,20 +2,20 @@
 
 import {
   FaIdCard,
-  FaUsers,
-  FaMapMarkerAlt,
-  FaSearch,
   FaImage,
-  FaPhone,
   FaInfo,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaSearch,
+  FaUsers,
 } from "react-icons/fa";
 
-import { MdDirectionsCar, MdSimCard, MdSettings } from "react-icons/md";
+import { MdDirectionsCar, MdSettings, MdSimCard } from "react-icons/md";
 
 import Chat from "@components/chat/Chat";
-import { useDispatch, useSelector } from "react-redux";
+import { setFeature, setNavbar } from "@redux/slices/featureSlice";
 import { AppDispatch, RootState } from "@redux/store";
-import { setNavbar, setFeature } from "@redux/slices/featureSlice";
+import { useDispatch, useSelector } from "react-redux";
 import Settings from "../settings/Settings";
 
 const features = [

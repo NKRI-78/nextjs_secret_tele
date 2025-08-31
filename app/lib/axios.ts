@@ -2,7 +2,6 @@
 import axios from "axios";
 // import Cookies from "js-cookie";
 
-// Create an Axios instance
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BASE_URL,
 });

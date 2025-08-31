@@ -28,36 +28,18 @@ export const sendMsgAsync = createAsyncThunk(
   }
 );
 
-// export const AskAsync = createAsyncThunk(
-//   "chat/ask",
-//   async ({ data: data }: { data: any }) => {
-//     const response = await AskAnswer(data);
-//     return response;
-//   }
-// );
-
-// export const getAnswerAsync = createAsyncThunk("chat/answer", async () => {
-//   const response = await GetAnswer();
-//   return response;
-// });
 
 interface ChatState {
   loading: boolean;
-  // data: ChatResponse | null;
-  // answer: AnswerItem[];
   message: ChatMessage[];
   error: string | null;
 }
 
 const initialState: ChatState = {
-  // data: null,
-  // answer: [],
   message: [],
   loading: false,
   error: null,
 };
-
-// clearChat
 
 const chatSlice = createSlice({
   name: "chat",
@@ -66,30 +48,12 @@ const chatSlice = createSlice({
     clearError(state) {
       state.error = null;
     },
-    // clearChat(state) {
-    // state.data = null;
-    // },
     clearChatMessage(state) {
       state.message = [];
     },
   },
   extraReducers: (builder) => {
     builder
-      // .addCase(getAnswerAsync.pending, (state) => {
-      //   state.loading = true;
-      //   state.error = null;
-      // })
-      // .addCase(
-      //   getAnswerAsync.fulfilled,
-      //   (state, action: PayloadAction<AnswerItem[]>) => {
-      //     state.answer = action.payload;
-      //     state.loading = false;
-      //   }
-      // )
-      // .addCase(getAnswerAsync.rejected, (state, action) => {
-      //   state.loading = false;
-      //   state.error = action.error.message || "Failed to fetch answer data";
-      // })
       .addCase(chatMessageListAsync.pending, (state) => {
         state.loading = true;
         state.error = null;
