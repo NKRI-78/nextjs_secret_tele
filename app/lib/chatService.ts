@@ -5,7 +5,7 @@ import axios from "axios";
 export const ChatMessageList = async () => {
   try {
     const response = await api.get(
-      "http://103.174.115.238:8000/messages/@OSngrok_bot?limit=10"
+      "/messages/@OSngrok_bot?limit=10"
     );
     const data = response?.data?.messages;
     return data;
@@ -20,37 +20,6 @@ export const ChatMessageList = async () => {
   }
 };
 
-export const ChatList = async () => {
-  try {
-    const response = await api.get(``);
-    const data = response.data;
-    return data;
-  } catch (e: any) {
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: e?.response?.data?.message || e.message,
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  }
-};
-
-export const ChatAdminList = async () => {
-  try {
-    const response = await api.get(``);
-    const data = response.data;
-    return data;
-  } catch (e: any) {
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: e?.response?.data?.message || e.message,
-      timer: 2000,
-      showConfirmButton: false,
-    });
-  }
-};
 
 export const SendMessage = async (formData: FormData) => {
   try {
