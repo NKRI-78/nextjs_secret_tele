@@ -1,6 +1,5 @@
 import { ChatMessage } from "@/app/interfaces/botsecret/answer";
 import {
-  ChatAdminList,
   ChatMessageList,
   SendMessage,
   SendMessageBtn,
@@ -11,14 +10,6 @@ export const chatMessageListAsync = createAsyncThunk(
   "chat/message/list",
   async () => {
     const response = await ChatMessageList();
-    return response;
-  }
-);
-
-export const chatAdminListAsync = createAsyncThunk(
-  "chat/admin/list",
-  async () => {
-    const response = await ChatAdminList();
     return response;
   }
 );
