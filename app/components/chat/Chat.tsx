@@ -280,7 +280,11 @@ const Chat = () => {
                     style={{ wordBreak: "break-word" }}
                   >
                     {msg.text && (
-                      <div className="whitespace-pre-wrap">{msg.text}</div>
+                      <div className="whitespace-pre-wrap">
+                        {msg.text.includes("Mengirim permintaan…")
+                          ? "Sedang diproses.."
+                          : msg.text}
+                      </div>
                     )}
 
                     {msg.mime_type === "image/jpeg" && (
