@@ -3,8 +3,8 @@
 import "./globals.css";
 
 import { store } from "@redux/store";
-import { Provider } from "react-redux";
 import { usePathname } from "next/navigation";
+import { Provider } from "react-redux";
 
 import localFont from "next/font/local";
 
@@ -40,9 +40,7 @@ export default function RootLayout({
               {children}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-screen">
-              {children}
-            </div>
+            <div>{children}</div>
           )}
           <ModalLogout />
         </body>

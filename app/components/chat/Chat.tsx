@@ -1,431 +1,281 @@
 "use client";
 
-import type {
-  ChatButton,
-  ChatMessage,
-} from "@/app/interfaces/botsecret/answer";
-import {
-  chatMessageListAsync,
-  sendMsgAsync,
-  sendMsgButtonAsync,
-} from "@/redux/slices/chatSlice";
-import type { AppDispatch, RootState } from "@redux/store";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { io, Socket } from "socket.io-client";
-import Settings from "../settings/Settings";
+import { useMemo, useState } from "react";
 
-const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
+/* ---------- dummy data ---------- */
+type ChatItem = {
+  id: string;
+  name: string;
+  lastMessage: string;
+  time: string; // e.g., "09:12"
+  unread?: number;
+  online?: boolean;
+  pinned?: boolean;
+};
 
-/* ---------- INLINE KEYBOARD: per-button loading ---------- */
-function InlineKeyboard({
-  buttons,
-  onClick,
-  disabledAll,
-  loadingId,
-}: {
-  buttons: ChatButton[];
-  onClick: (b: ChatButton) => void;
-  disabledAll?: boolean;
-  loadingId?: string | null;
-}) {
-  if (!buttons?.length) return null;
+const DUMMY_CHATS: ChatItem[] = [
+  {
+    id: "1",
+    name: "Agam (You)",
+    lastMessage: "Otw deploy fix cookies…",
+    time: "21:45",
+    online: true,
+    pinned: true,
+  },
+  {
+    id: "2",
+    name: "Rakhsa Team",
+    lastMessage: "Socket connected ✅",
+    time: "20:18",
+    unread: 3,
+    pinned: true,
+  },
+  {
+    id: "3",
+    name: "Artiq Studio",
+    lastMessage: "Landing page draft done.",
+    time: "18:02",
+  },
+  {
+    id: "4",
+    name: "CaptBridge",
+    lastMessage: "COF tables updated.",
+    time: "16:41",
+    unread: 1,
+  },
+  {
+    id: "5",
+    name: "HP3KI Admin",
+    lastMessage: "Share latest APK pls.",
+    time: "15:03",
+    online: true,
+  },
+  {
+    id: "6",
+    name: "PT TJL HR",
+    lastMessage: "CV list sudah dikirim.",
+    time: "14:27",
+  },
+  {
+    id: "7",
+    name: "Node/Nest Squad",
+    lastMessage: "TypeORM config merged.",
+    time: "13:10",
+  },
+  {
+    id: "8",
+    name: "Flutter Devs",
+    lastMessage: "PhotoViewGallery ok.",
+    time: "12:56",
+    unread: 2,
+  },
+  {
+    id: "9",
+    name: "Go Backend",
+    lastMessage: "GORM migration passed.",
+    time: "11:22",
+  },
+  {
+    id: "10",
+    name: "Web3 Lab",
+    lastMessage: "HTK faucet cooldown 24h.",
+    time: "10:15",
+  },
+  {
+    id: "11",
+    name: "Design Squad",
+    lastMessage: "Tailwind grids updated.",
+    time: "09:44",
+  },
+  {
+    id: "12",
+    name: "Family Group",
+    lastMessage: "Dinner jam 7 ya.",
+    time: "08:12",
+    unread: 5,
+    online: true,
+  },
+];
+
+/* ---------- helpers ---------- */
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("");
+}
+
+function classNames(...xs: Array<string | false | undefined>) {
+  return xs.filter(Boolean).join(" ");
+}
+
+/* ---------- components ---------- */
+export default function Chat() {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string>("1");
+
+  const { pinned, others } = useMemo(() => {
+    const list = DUMMY_CHATS.filter((c) =>
+      (c.name + " " + c.lastMessage).toLowerCase().includes(query.toLowerCase())
+    );
+    return {
+      pinned: list.filter((c) => c.pinned),
+      others: list.filter((c) => !c.pinned),
+    };
+  }, [query]);
 
   return (
-    <div className="mt-2 grid grid-cols-2 gap-2">
-      {buttons.map((b) => {
-        const isLoading = loadingId === b.data;
-        const disabled = disabledAll || isLoading;
-        return (
-          <button
-            key={b.data}
-            type="button"
-            onClick={() => onClick(b)}
-            disabled={disabled}
-            title={b.data}
-            className={`w-full rounded-xl border px-3 py-2 text-sm transition
-              ${
-                disabled
-                  ? "cursor-not-allowed opacity-60"
-                  : "hover:bg-gray-100 active:scale-[0.99]"
-              }
-              bg-white/70 backdrop-blur border-gray-200 shadow-sm flex items-center gap-2 justify-center`}
-          >
-            {isLoading && (
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
+        <div className="flex items-center gap-2 p-3">
+          <div className="text-lg font-semibold">Chats</div>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              className="rounded-xl border px-3 py-1 text-sm hover:bg-gray-50"
+              title="New chat"
+              type="button"
+            >
+              + New
+            </button>
+          </div>
+        </div>
+        <div className="p-3 pt-0">
+          <label className="block">
+            <span className="sr-only">Search</span>
+            <div className="flex items-center rounded-xl border bg-white px-3">
               <svg
-                className="h-4 w-4 animate-spin"
+                width="18"
+                height="18"
                 viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
+                aria-hidden="true"
+                className="mr-2 opacity-60"
               >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
                 <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                 />
               </svg>
-            )}
-            <span className="truncate">{b.text}</span>
-          </button>
-        );
-      })}
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search chats…"
+                className="h-10 w-full bg-transparent outline-none"
+              />
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Lists */}
+      <div className="flex-1 overflow-y-auto">
+        {pinned.length > 0 && (
+          <Section title="Pinned">
+            {pinned.map((c) => (
+              <ChatRow
+                key={c.id}
+                item={c}
+                selected={selectedId === c.id}
+                onClick={() => setSelectedId(c.id)}
+              />
+            ))}
+          </Section>
+        )}
+        <Section title="All chats">
+          {others.map((c) => (
+            <ChatRow
+              key={c.id}
+              item={c}
+              selected={selectedId === c.id}
+              onClick={() => setSelectedId(c.id)}
+            />
+          ))}
+          {others.length === 0 && pinned.length === 0 && (
+            <div className="px-3 pb-6 text-sm text-gray-500">
+              No chats found.
+            </div>
+          )}
+        </Section>
+      </div>
     </div>
   );
 }
 
-const Chat = () => {
-  const dispatch = useDispatch<AppDispatch>();
-  const { message, error } = useSelector((state: RootState) => state.chat);
-
-  const navbar = useSelector((state: RootState) => state.feature.navbar);
-
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState("");
-
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-
-  // smart scroll container
-  const listRef = useRef<HTMLDivElement>(null);
-
-  const username = "saya";
-
-  // local loadings
-  const [sendingMessage, setSendingMessage] = useState(false);
-  // pending inline button keyed by message id -> data
-  const [pendingByMsg, setPendingByMsg] = useState<
-    Record<string, string | null>
-  >({});
-
-  useEffect(() => {
-    dispatch(chatMessageListAsync());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (message) {
-      const incoming: ChatMessage[] = message.map((msg) => ({
-        id: msg.id,
-        buttons: msg.buttons,
-        chat_id: msg.chat_id,
-        date: msg.date,
-        file_name: msg.file_name,
-        file_size: msg.file_size,
-        mime_type: msg.mime_type,
-        sender_id: msg.sender_id,
-        text: msg.text,
-        username: msg.username,
-      }));
-      setMessages(incoming);
-    }
-  }, [message]);
-
-  useEffect(() => {
-    socket.emit("room:lobby:join", "Hello");
-
-    const handler = (msg: any) => {
-      try {
-        const parsed: ChatMessage = JSON.parse(msg);
-        const dataMsg: ChatMessage = {
-          id: parsed.id,
-          buttons: parsed.buttons,
-          chat_id: parsed.chat_id,
-          date: parsed.date,
-          file_name: parsed.file_name,
-          file_size: parsed.file_size,
-          mime_type: parsed.mime_type,
-          sender_id: parsed.sender_id,
-          text: parsed.text,
-          username: parsed.username,
-        };
-
-        // append message
-        setMessages((prev) => [...prev, dataMsg]);
-
-        // when bot replies, clear ALL inline button loadings
-        setPendingByMsg({});
-        // If you also want to stop the text "Sending..." spinner on bot reply, uncomment:
-        // setSendingMessage(false);
-      } catch (e) {
-        console.error("Invalid JSON in bot_msg:", e);
-      }
-    };
-
-    socket.on("bot_msg", handler);
-    return () => {
-      socket.off("bot_msg", handler);
-    };
-  }, []);
-
-  // smart scroll: bottom when overflow; centered by CSS when short
-  const scrollSmart = () => {
-    const el = listRef.current;
-    if (!el) return;
-    const hasOverflow = el.scrollHeight > el.clientHeight + 4;
-    if (hasOverflow) {
-      el.scrollTop = el.scrollHeight;
-    }
-  };
-
-  useEffect(() => {
-    scrollSmart();
-  }, [messages]);
-
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file);
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPreviewUrl(reader.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setPreviewUrl(null);
-    }
-  };
-
-  /* ---------- INLINE BUTTON SEND: keep loading until socket reply ---------- */
-  const handleInlineClick = useCallback(
-    async (btn: ChatButton, msg: ChatMessage) => {
-      const key = String(msg.id);
-      if (pendingByMsg[key]) return; // prevent double-tap on THAT message
-
-      setPendingByMsg((prev) => ({ ...prev, [key]: btn.data }));
-
-      const formData = new FormData();
-      formData.append("chat", "@OSngrok_bot");
-      formData.append("button_data", btn.data);
-
-      try {
-        await dispatch(sendMsgButtonAsync({ formData })).unwrap();
-        await dispatch(chatMessageListAsync()).unwrap();
-        // DO NOT clear here — we wait for socket 'bot_msg' to clear loading
-      } catch (e) {
-        console.error(e);
-        // On error, clear this message's loading so UI doesn't get stuck
-        setPendingByMsg((prev) => ({ ...prev, [key]: null }));
-      }
-    },
-    [dispatch, pendingByMsg]
-  );
-
-  /* ---------- TEXT/MEDIA SEND ---------- */
-  const handleSubmit = async () => {
-    if (sendingMessage) return;
-    if (!input.trim() && !uploadedFile) return;
-
-    setSendingMessage(true);
-    try {
-      const formData = new FormData();
-      formData.append("chat", "@OSngrok_bot");
-      formData.append("message", input.trim());
-      if (uploadedFile) {
-        formData.append("file", uploadedFile);
-        formData.append("message", "");
-      }
-
-      await dispatch(sendMsgAsync({ formData })).unwrap();
-      await dispatch(chatMessageListAsync()).unwrap();
-
-      setInput("");
-      setUploadedFile(null);
-      setPreviewUrl(null);
-    } catch (err) {
-      console.error("Send failed:", err);
-    } finally {
-      // If you want the text send spinner to end only on socket reply,
-      // move this to the socket handler and comment this out.
-      setSendingMessage(false);
-    }
-  };
-
-  return navbar == "settings" ? (
-    <Settings />
-  ) : (
-    <div className="max-w-md mx-auto p-4 bg-white shadow rounded-md h-[500px] margin-150 flex flex-col">
-      {error && <div className="text-center text-red-500">{error}</div>}
-
-      {/* -------- MESSAGE LIST: centered when short, scrolls when long -------- */}
-      <div ref={listRef} className="flex-1 overflow-y-auto">
-        <div className="min-h-full flex flex-col justify-center px-2 space-y-3 mb-6">
-          {[...messages]
-            .filter(
-              (msg) =>
-                (msg.text && msg.text.trim() !== "") ||
-                msg.mime_type === "image/jpeg" ||
-                (msg.buttons && msg.buttons.length > 0)
-            )
-            .sort((a, b) => (a.id as number) - (b.id as number))
-            .map((msg) => {
-              const isMe = msg.username === username;
-              const showButtons =
-                !isMe && msg.buttons && msg.buttons.length > 0;
-
-              return (
-                <div
-                  key={msg.id}
-                  className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`relative p-3 rounded-xl max-w-[75%] text-sm font-sans leading-snug shadow-md ${
-                      isMe
-                        ? "bg-blue-600 text-white rounded-br-none"
-                        : "bg-gray-100 text-gray-900 rounded-bl-none"
-                    }`}
-                    style={{ wordBreak: "break-word" }}
-                  >
-                    {msg.text && (
-                      <div className="whitespace-pre-wrap">
-                        {msg.text.includes("Mengirim permintaan…")
-                          ? "Sedang diproses.."
-                          : msg.text}
-                      </div>
-                    )}
-
-                    {msg.mime_type === "image/jpeg" && (
-                      <img
-                        src={`${process.env.NEXT_PUBLIC_BASE_URL}/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
-                        alt="Preview"
-                        className="max-w-full max-h-full rounded-lg shadow-lg mt-2"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    )}
-
-                    {showButtons && (
-                      <InlineKeyboard
-                        buttons={msg.buttons}
-                        disabledAll={false}
-                        loadingId={pendingByMsg[String(msg.id)] ?? null}
-                        onClick={(b) => handleInlineClick(b, msg)}
-                      />
-                    )}
-
-                    <div
-                      className={`text-[10px] ${
-                        isMe ? "text-white" : "text-gray-400"
-                      } mt-1 text-right select-none`}
-                    >
-                      {new Date(msg.date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-
-                    {/* subtle bubble tail accent */}
-                    <div
-                      className={`absolute -z-10 bottom-0 h-4 w-4 ${
-                        isMe ? "right-2 bg-blue-600" : "left-2 bg-gray-100"
-                      } rounded-full blur-[6px] opacity-30`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-        </div>
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="pb-2">
+      <div className="px-3 pb-2 pt-3 text-xs font-medium uppercase tracking-wide text-gray-500">
+        {title}
       </div>
-
-      {/* -------- COMPOSER -------- */}
-      <div className="flex flex-wrap items-center gap-4 border p-2 rounded-md bg-gray-50">
-        {uploadedFile && (
-          <div className="flex items-center space-x-4 border p-2 rounded-md bg-gray-50">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="preview"
-                className="w-16 h-16 object-cover rounded"
-              />
-            ) : (
-              <div className="text-gray-700">📎 {uploadedFile.name}</div>
-            )}
-            <button
-              onClick={() => {
-                setUploadedFile(null);
-                setPreviewUrl(null);
-              }}
-              className="text-red-500 hover:underline text-sm"
-              disabled={sendingMessage}
-            >
-              Remove
-            </button>
-          </div>
-        )}
-
-        <label
-          className={`cursor-pointer px-3 py-2 rounded-md ${
-            sendingMessage
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-          }`}
-        >
-          📎
-          <input
-            type="file"
-            className="hidden"
-            accept="image/png, image/jpeg, .gif"
-            disabled={sendingMessage}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileUpload(file);
-            }}
-          />
-        </label>
-
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) =>
-            !sendingMessage && e.key === "Enter" && handleSubmit()
-          }
-          disabled={sendingMessage}
-          className="flex-1 border rounded-md px-3 py-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder={sendingMessage ? "Sending..." : "Type /start to begin"}
-        />
-
-        <button
-          onClick={handleSubmit}
-          disabled={sendingMessage}
-          className={`px-4 py-2 rounded text-white transition ${
-            sendingMessage
-              ? "bg-blue-400 cursor-not-allowed"
-              : "bg-blue-500 hover:bg-blue-600"
-          } flex items-center gap-2`}
-        >
-          {sendingMessage ? (
-            <>
-              <svg
-                className="h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                />
-              </svg>
-              Sending...
-            </>
-          ) : (
-            "Submit"
-          )}
-        </button>
-      </div>
+      <div className="space-y-1">{children}</div>
     </div>
   );
-};
+}
 
-export default Chat;
+function ChatRow({
+  item,
+  selected,
+  onClick,
+}: {
+  item: ChatItem;
+  selected?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={classNames(
+        "group flex w-full items-center gap-3 px-3 py-2 transition",
+        "hover:bg-gray-50",
+        selected && "bg-gray-100"
+      )}
+    >
+      <Avatar name={item.name} online={item.online} />
+      <div className="min-w-0 flex-1 text-left">
+        <div className="flex items-center gap-2">
+          <span className="truncate font-medium">{item.name}</span>
+          {item.pinned && (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+              PINNED
+            </span>
+          )}
+          <span className="ml-auto text-xs text-gray-500">{item.time}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm text-gray-600">
+            {item.lastMessage}
+          </span>
+          {typeof item.unread === "number" && item.unread > 0 && (
+            <span className="ml-auto inline-flex min-w-[1.5rem] items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+              {item.unread > 99 ? "99+" : item.unread}
+            </span>
+          )}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Avatar({ name, online }: { name: string; online?: boolean }) {
+  const ini = initials(name);
+  return (
+    <div className="relative h-10 w-10 shrink-0">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-sm font-semibold text-white">
+        {ini || "?"}
+      </div>
+      {online && (
+        <span
+          title="Online"
+          className="absolute -bottom-0.5 -right-0.5 block h-3 w-3 rounded-full border-2 border-white bg-emerald-500"
+        />
+      )}
+    </div>
+  );
+}

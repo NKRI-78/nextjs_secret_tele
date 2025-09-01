@@ -12,7 +12,7 @@ import {
 
 import { MdDirectionsCar, MdSettings, MdSimCard } from "react-icons/md";
 
-import Chat from "@components/chat/Chat";
+import Chat from "@/app/components/chat/MessaggeList";
 import { setFeature, setNavbar } from "@redux/slices/featureSlice";
 import { AppDispatch, RootState } from "@redux/store";
 import { useDispatch, useSelector } from "react-redux";
