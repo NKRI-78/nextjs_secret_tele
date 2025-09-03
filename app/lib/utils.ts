@@ -31,6 +31,15 @@ export const formatRupiah = (amount: number | string) => {
   }).format(Number(amount));
 };
 
+export function initials(name: string) {
+  const parts = name.trim().split(/\s+/).slice(0, 2);
+  return parts.map((p) => p[0]?.toUpperCase() ?? "").join("");
+}
+
+export function classNames(...xs: Array<string | false | undefined>) {
+  return xs.filter(Boolean).join(" ");
+}
+
 export const formatDate = (date: string | Date): string => {
   return moment(date).format("YYYY-MM-DD HH:mm:ss");
 };

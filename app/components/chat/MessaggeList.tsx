@@ -14,8 +14,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
+import { ChatItem } from "./ChatWrapper";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
+
+// simple avatar here (decoupled from Chat.tsx)
+function TopAvatar({ name }: { name: string }) {
+  const ini =
+    name
+      .split(" ")
+      .map((s) => s[0]?.toUpperCase())
+      .slice(0, 2)
+      .join("") || "?";
+  return (
+    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-white flex items-center justify-center text-sm font-semibold">
+      {ini}
+    </div>
+  );
+}
 
 /* ---------- INLINE KEYBOARD: per-button loading ---------- */
 function InlineKeyboard({
@@ -80,7 +96,7 @@ function InlineKeyboard({
   );
 }
 
-const MessageList = () => {
+const MessageList = ({ selected }: { selected: ChatItem | null }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { message, error } = useSelector((state: RootState) => state.chat);
   const navbar = useSelector((state: RootState) => state.feature.navbar);
@@ -229,8 +245,22 @@ const MessageList = () => {
 
   return (
     /* Full width & height container, no fixed width/height, no centering box */
-    <div className="w-full h-full flex flex-col bg-white md:rounded-none p-4">
+    <div className="w-full h-full flex flex-col bg-white md:rounded-none">
       {error && <div className="text-center text-red-500">{error}</div>}
+
+      {/* TOP NAVBAR with selected chat info */}
+      <div className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+        {selected ? (
+          <div className="flex items-center gap-4 p-4">
+            <TopAvatar name={selected.name} />
+            <div className="min-w-0">
+              <div className="font-medium truncate">{selected.name}</div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-3 text-sm text-gray-500">Select a chat</div>
+        )}
+      </div>
 
       {/* MESSAGE LIST: flex-1 scroll area */}
       <div ref={listRef} className="flex-1 overflow-y-auto">
