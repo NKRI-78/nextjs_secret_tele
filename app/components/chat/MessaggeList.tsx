@@ -182,9 +182,8 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
 
       // Clear draft only after success
       setInput("");
-      try {
-        localStorage.removeItem(keyDraft(chatKey));
-      } catch {}
+      localStorage.removeItem(keyDraft(chatKey));
+
       setUploadedFile(null);
       setPreviewUrl(null);
     } catch (err) {
