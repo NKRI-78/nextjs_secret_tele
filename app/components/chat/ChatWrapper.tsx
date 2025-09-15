@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import ResponsiveTwoPane from "./ChatTwopPane";
 import Chat from "./Chat";
 import MessageList from "./MessaggeList";
+import MessageListResult from "./MessageListResult";
+import MessageListCompany from "./MessageListCompany";
 
 export type ChatItem = {
   id: string;
@@ -18,22 +20,36 @@ const INITIAL_CHATS: ChatItem[] = [
     id: "1",
     name: "Hasil Pencarian",
     lastMessage: "",
-    time: "21:45",
+    time: "00:00",
     type: "result",
   },
   {
     id: "2",
-    name: "Telkomsel",
+    name: "CEK KK",
     lastMessage: "",
-    time: "20:18",
-    type: "location",
+    time: "00:00",
+    type: "cekkk",
   },
   {
     id: "3",
-    name: "Registrasi Number",
+    name: "NIK",
     lastMessage: "",
-    time: "16:41",
+    time: "00:00",
+    type: "nik",
+  },
+  {
+    id: "4",
+    name: "Profiling",
+    lastMessage: "",
+    time: "00:00",
     type: "profiling",
+  },
+  {
+    id: "5",
+    name: "Perusahaan",
+    lastMessage: "",
+    time: "00:00",
+    type: "perusahaan",
   },
 ];
 
@@ -54,8 +70,7 @@ export default function ChatWrapper() {
       {{
         left: (
           <div
-            className="w-full border-b md:border-b-0 md:border-r bg-white
-                       min-h-[280px] md:min-h-0 md:h-[100dvh] overflow-y-auto"
+            className="w-full border-b md:border-b-0 md:border-r bg-white min-h-[280px] md:min-h-0 md:h-[100dvh] overflow-y-auto"
             aria-label="Chat list"
           >
             <Chat
@@ -67,7 +82,13 @@ export default function ChatWrapper() {
         ),
         right: (
           <main className="flex-1 min-h-0 md:h-[100dvh] overflow-hidden">
-            <MessageList selected={selected} />
+            {selectedId == "1" ? (
+              <MessageListResult selected={selected} />
+            ) : selectedId == "5" ? (
+              <MessageListCompany selected={selected} />
+            ) : (
+              <MessageList selected={selected} />
+            )}
           </main>
         ),
       }}

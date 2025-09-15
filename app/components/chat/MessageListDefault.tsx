@@ -96,7 +96,7 @@ function InlineKeyboard({
   );
 }
 
-const MessageList = ({ selected }: { selected: ChatItem | null }) => {
+const MessageListDefault = ({ selected }: { selected: ChatItem | null }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { message, error } = useSelector((state: RootState) => state.chat);
   const navbar = useSelector((state: RootState) => state.feature.navbar);
@@ -442,4 +442,4 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
   );
 };
 
-export default MessageList;
+export default MessageListDefault;

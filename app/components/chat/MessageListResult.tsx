@@ -6,6 +6,7 @@ import type {
 } from "@/app/interfaces/botsecret/answer";
 import {
   chatMessageListAsync,
+  chatMessageListResultAsync,
   sendMsgAsync,
   sendMsgButtonAsync,
 } from "@/redux/slices/chatSlice";
@@ -15,6 +16,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
+import { BotResult } from "@/app/interfaces/botsecret/result";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
 
@@ -96,12 +98,12 @@ function InlineKeyboard({
   );
 }
 
-const MessageList = ({ selected }: { selected: ChatItem | null }) => {
+const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { message, error } = useSelector((state: RootState) => state.chat);
+  const { result, error } = useSelector((state: RootState) => state.chat);
   const navbar = useSelector((state: RootState) => state.feature.navbar);
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<BotResult[]>([]);
   const [input, setInput] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -117,43 +119,43 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
   >({});
 
   useEffect(() => {
-    dispatch(chatMessageListAsync());
+    dispatch(chatMessageListResultAsync());
   }, [dispatch]);
 
   useEffect(() => {
-    if (message) {
-      const incoming: ChatMessage[] = message.map((msg) => ({
+    if (result) {
+      const incoming: BotResult[] = result.map((msg) => ({
         id: msg.id,
-        buttons: msg.buttons,
         chat_id: msg.chat_id,
-        date: msg.date,
-        file_name: msg.file_name,
-        file_size: msg.file_size,
+        file_url: msg.file_url,
+        message_id: msg.message_id,
         mime_type: msg.mime_type,
-        sender_id: msg.sender_id,
-        text: msg.text,
+        result_from: msg.result_from,
+        result_text: msg.result_text,
         username: msg.username,
+        created_at: msg.created_at,
+        updated_at: msg.updated_at,
       }));
       setMessages(incoming);
     }
-  }, [message]);
+  }, [result]);
 
   useEffect(() => {
     socket.emit("room:lobby:join", "Hello");
 
     const handler = (msg: any) => {
       try {
-        const parsed: ChatMessage = JSON.parse(msg);
-        const dataMsg: ChatMessage = {
+        const parsed: BotResult = JSON.parse(msg);
+        const dataMsg: BotResult = {
           id: parsed.id,
-          buttons: parsed.buttons,
           chat_id: parsed.chat_id,
-          date: parsed.date,
-          file_name: parsed.file_name,
-          file_size: parsed.file_size,
+          created_at: parsed.created_at,
+          file_url: parsed.file_url,
+          message_id: parsed.message_id,
           mime_type: parsed.mime_type,
-          sender_id: parsed.sender_id,
-          text: parsed.text,
+          result_from: parsed.result_from,
+          result_text: parsed.result_text,
+          updated_at: parsed.updated_at,
           username: parsed.username,
         };
         setMessages((prev) => [...prev, dataMsg]);
@@ -268,15 +270,12 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
           {[...messages]
             .filter(
               (msg) =>
-                (msg.text && msg.text.trim() !== "") ||
-                msg.mime_type === "image/jpeg" ||
-                (msg.buttons && msg.buttons.length > 0)
+                (msg.result_text && msg.result_text.trim() !== "") ||
+                msg.mime_type === "image/jpeg"
             )
             .sort((a, b) => (a.id as number) - (b.id as number))
             .map((msg) => {
               const isMe = msg.username === username;
-              const showButtons =
-                !isMe && msg.buttons && msg.buttons.length > 0;
 
               return (
                 <div
@@ -292,11 +291,11 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
                       }`}
                     style={{ wordBreak: "break-word" }}
                   >
-                    {msg.text && (
+                    {msg.result_text && (
                       <div className="whitespace-pre-wrap">
-                        {msg.text.includes("Mengirim permintaan…")
+                        {msg.result_text.includes("Mengirim permintaan…")
                           ? "Sedang diproses.."
-                          : msg.text}
+                          : msg.result_text}
                       </div>
                     )}
 
@@ -310,21 +309,12 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
                       />
                     )}
 
-                    {showButtons && (
-                      <InlineKeyboard
-                        buttons={msg.buttons}
-                        disabledAll={false}
-                        loadingId={pendingByMsg[String(msg.id)] ?? null}
-                        onClick={(b) => handleInlineClick(b, msg)}
-                      />
-                    )}
-
                     <div
                       className={`text-[10px] ${
                         isMe ? "text-white" : "text-gray-400"
                       } mt-1 text-right select-none`}
                     >
-                      {new Date(msg.date).toLocaleTimeString([], {
+                      {new Date(msg.created_at).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
@@ -442,4 +432,4 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
   );
 };
 
-export default MessageList;
+export default MessageListResult;

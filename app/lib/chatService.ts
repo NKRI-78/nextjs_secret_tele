@@ -1,12 +1,11 @@
 import Swal from "sweetalert2";
 import api from "./axios";
 import axios from "axios";
+import { CompanyDoc } from "../interfaces/botsecret/company";
 
 export const ChatMessageList = async () => {
   try {
-    const response = await api.get(
-      "/messages/@OSngrok_bot?limit=10"
-    );
+    const response = await api.get("/messages/@Wolf_botbot?limit=10");
     const data = response?.data?.messages;
     return data;
   } catch (e: any) {
@@ -20,6 +19,42 @@ export const ChatMessageList = async () => {
   }
 };
 
+export const ChatMessageListResult = async () => {
+  try {
+    const response = await api.get("/get_search_results");
+    const data = response?.data?.results;
+    return data;
+  } catch (e: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: e?.response?.data?.message || e.message,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+  }
+};
+
+export const ChatMessageListCompany = async (formData: FormData) => {
+  try {
+    const response = await api.post("/search_perusahaan", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    const data = response?.data?.data as CompanyDoc[];
+    return data;
+  } catch (e: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: e?.response?.data?.message || e.message,
+      timer: 2000,
+      showConfirmButton: false,
+    });
+    throw e;
+  }
+};
 
 export const SendMessage = async (formData: FormData) => {
   try {

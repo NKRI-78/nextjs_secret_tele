@@ -31,6 +31,8 @@ export type ChatMessage = {
   buttons: ChatButton[];
 };
 
+
+
 // export type ChatPayload = {
 //   chat: string;
 //   messages: ChatMessage[];
