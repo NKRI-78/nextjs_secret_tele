@@ -38,7 +38,7 @@ const INITIAL_CHATS: ChatItem[] = [
     name: "NIK",
     lastMessage: "",
     time: "00:00",
-    command: "/cek NIK",
+    command: "/nik",
     type: "nik",
   },
   {
