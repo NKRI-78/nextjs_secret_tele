@@ -1,24 +1,13 @@
 "use client";
 
-import type {
-  ChatButton,
-  ChatMessage,
-} from "@/app/interfaces/botsecret/answer";
-import {
-  chatMessageListAsync,
-  sendMsgAsync,
-  sendMsgButtonAsync,
-} from "@/redux/slices/chatSlice";
+import type { ChatMessage } from "@/app/interfaces/botsecret/answer";
+import { sendMsgAsync } from "@/redux/slices/chatSlice";
 import type { AppDispatch, RootState } from "@redux/store";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
 
-const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
-
-// simple avatar here (decoupled from Chat.tsx)
 function TopAvatar({ name }: { name: string }) {
   const ini =
     name
@@ -33,141 +22,75 @@ function TopAvatar({ name }: { name: string }) {
   );
 }
 
-/* ---------- INLINE KEYBOARD: per-button loading ---------- */
-function InlineKeyboard({
-  buttons,
-  onClick,
-  disabledAll,
-  loadingId,
-}: {
-  buttons: ChatButton[];
-  onClick: (b: ChatButton) => void;
-  disabledAll?: boolean;
-  loadingId?: string | null;
-}) {
-  if (!buttons?.length) return null;
-  return (
-    <div className="mt-2 grid grid-cols-2 gap-2">
-      {buttons.map((b) => {
-        const isLoading = loadingId === b.data;
-        const disabled = disabledAll || isLoading;
-        return (
-          <button
-            key={b.data}
-            type="button"
-            onClick={() => onClick(b)}
-            disabled={disabled}
-            title={b.data}
-            className={`w-full rounded-xl border px-3 py-2 text-sm transition
-              ${
-                disabled
-                  ? "cursor-not-allowed opacity-60"
-                  : "hover:bg-gray-100 active:scale-[0.99]"
-              }
-              bg-white/70 backdrop-blur border-gray-200 shadow-sm flex items-center gap-2 justify-center`}
-          >
-            {isLoading && (
-              <svg
-                className="h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                />
-              </svg>
-            )}
-            <span className="truncate">{b.text}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+/* ---------- small helpers ---------- */
+const keyMsgs = (chatKey: string) => `chat:messages:v2:${chatKey}`;
+const keyDraft = (chatKey: string) => `chat:draft:v1:${chatKey}`;
+
+const safeParse = <T,>(raw: string | null, fallback: T): T => {
+  try {
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 const MessageList = ({ selected }: { selected: ChatItem | null }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const { message, error } = useSelector((state: RootState) => state.chat);
   const navbar = useSelector((state: RootState) => state.feature.navbar);
+  const { error } = useSelector((state: RootState) => state.chat);
 
+  const listRef = useRef<HTMLDivElement>(null);
+  const username = "saya";
+
+  // Derive a stable key per-chat
+  const chatKey = useMemo(
+    () => (selected?.id ? String(selected.id) : "no-chat"),
+    [selected?.id]
+  );
+
+  // Local state (single source of truth)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // scroll container for messages
-  const listRef = useRef<HTMLDivElement>(null);
-  const username = "saya";
-
-  // local loadings
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [pendingByMsg, setPendingByMsg] = useState<
-    Record<string, string | null>
-  >({});
 
+  /* ---------- load from LOCAL (per chat) ---------- */
   useEffect(() => {
-    dispatch(chatMessageListAsync());
-  }, [dispatch]);
+    const storedMsgs = safeParse<ChatMessage[]>(
+      typeof window !== "undefined"
+        ? localStorage.getItem(keyMsgs(chatKey))
+        : null,
+      []
+    );
+    setMessages(Array.isArray(storedMsgs) ? storedMsgs : []);
 
-  useEffect(() => {
-    if (message) {
-      const incoming: ChatMessage[] = message.map((msg) => ({
-        id: msg.id,
-        buttons: msg.buttons,
-        chat_id: msg.chat_id,
-        date: msg.date,
-        file_name: msg.file_name,
-        file_size: msg.file_size,
-        mime_type: msg.mime_type,
-        sender_id: msg.sender_id,
-        text: msg.text,
-        username: msg.username,
-      }));
-      setMessages(incoming);
-    }
-  }, [message]);
+    const storedDraft = safeParse<string>(
+      typeof window !== "undefined"
+        ? localStorage.getItem(keyDraft(chatKey))
+        : null,
+      ""
+    );
+    setInput(storedDraft || "");
 
-  useEffect(() => {
-    socket.emit("room:lobby:join", "Hello");
+    setUploadedFile(null);
+    setPreviewUrl(null);
+  }, [chatKey]);
 
-    const handler = (msg: any) => {
+  const persistNow = useCallback(
+    (next: ChatMessage[]) => {
       try {
-        const parsed: ChatMessage = JSON.parse(msg);
-        const dataMsg: ChatMessage = {
-          id: parsed.id,
-          buttons: parsed.buttons,
-          chat_id: parsed.chat_id,
-          date: parsed.date,
-          file_name: parsed.file_name,
-          file_size: parsed.file_size,
-          mime_type: parsed.mime_type,
-          sender_id: parsed.sender_id,
-          text: parsed.text,
-          username: parsed.username,
-        };
-        setMessages((prev) => [...prev, dataMsg]);
-        setPendingByMsg({}); // clear inline button loadings after bot reply
+        localStorage.setItem(
+          keyMsgs(chatKey),
+          JSON.stringify(next.slice(-500))
+        );
       } catch (e) {
-        console.error("Invalid JSON in bot_msg:", e);
+        console.warn("Failed to persist local messages:", e);
       }
-    };
-
-    socket.on("bot_msg", handler);
-    return () => {
-      socket.off("bot_msg", handler);
-    };
-  }, []);
+    },
+    [chatKey]
+  );
 
   const scrollSmart = useCallback(() => {
     const el = listRef.current;
@@ -175,67 +98,110 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
     const hasOverflow = el.scrollHeight > el.clientHeight + 4;
     if (hasOverflow) el.scrollTop = el.scrollHeight;
   }, []);
-
   useEffect(() => {
     scrollSmart();
   }, [messages, scrollSmart]);
 
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file);
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPreviewUrl(reader.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setPreviewUrl(null);
+  /* ---------- API payload -> local append (+persist inline) ---------- */
+  const appendFromApiPayload = (payload: any) => {
+    if (!payload) return;
+    const asArray = Array.isArray(payload) ? payload : [payload];
+    const normalized: ChatMessage[] = asArray
+      .map((p) => ({
+        id: p?.id ?? `local-${Date.now()}-${Math.random()}`,
+        buttons: p?.buttons ?? [],
+        chat_id: p?.chat_id ?? selected?.id ?? null,
+        date: p?.date ?? new Date().toISOString(),
+        file_name: p?.file_name ?? null,
+        file_size: p?.file_size ?? null,
+        mime_type: p?.mime_type ?? null,
+        sender_id: p?.sender_id ?? null,
+        text: typeof p?.text === "string" ? p.text : "",
+        username: p?.username ?? "bot",
+      }))
+      .filter(Boolean);
+
+    if (normalized.length) {
+      setMessages((prev) => {
+        const next = [...prev, ...normalized];
+        persistNow(next); // <-- persist immediately
+        return next;
+      });
     }
   };
 
-  const handleInlineClick = useCallback(
-    async (btn: ChatButton, msg: ChatMessage) => {
-      const key = String(msg.id);
-      if (pendingByMsg[key]) return; // prevent double-tap on THAT message
-
-      setPendingByMsg((prev) => ({ ...prev, [key]: btn.data }));
-
-      const formData = new FormData();
-      formData.append("chat", "@OSngrok_bot");
-      formData.append("button_data", btn.data);
-
-      try {
-        await dispatch(sendMsgButtonAsync({ formData })).unwrap();
-        await dispatch(chatMessageListAsync()).unwrap();
-        // loading cleared on socket reply
-      } catch (e) {
-        console.error(e);
-        setPendingByMsg((prev) => ({ ...prev, [key]: null }));
-      }
-    },
-    [dispatch, pendingByMsg]
-  );
-
+  /* ---------- submit: optimistic + persist inline ---------- */
   const handleSubmit = async () => {
     if (sendingMessage) return;
+    if (!selected) return;
     if (!input.trim() && !uploadedFile) return;
+
+    const nowIso = new Date().toISOString();
+    const localId = `local-${Date.now()}`;
+
+    const myMsg: ChatMessage = {
+      id: localId as unknown as number, // runtime is a string; cast is just for TS
+      buttons: [],
+      chat_id: (selected.id as unknown as number) ?? null,
+      date: nowIso,
+      file_name: uploadedFile?.name || null,
+      file_size: uploadedFile ? String(uploadedFile.size) : null,
+      mime_type: uploadedFile?.type || null,
+      sender_id: 0,
+      text: uploadedFile
+        ? ""
+        : `${selected?.command ?? ""} ${input.trim()}`.trim(),
+      username,
+    };
+
+    // Append + persist synchronously
+    setMessages((prev) => {
+      const next = [...prev, myMsg];
+      persistNow(next); // <-- persist immediately when you add
+      return next;
+    });
 
     setSendingMessage(true);
     try {
       const formData = new FormData();
-      formData.append("chat", "@OSngrok_bot");
-      formData.append("message", input.trim());
+      formData.append("chat", "@Wolf_botbot");
       if (uploadedFile) {
         formData.append("file", uploadedFile);
         formData.append("message", "");
+      } else {
+        formData.append(
+          "message",
+          `${selected?.command ?? ""} ${input.trim()}`.trim()
+        );
       }
 
-      await dispatch(sendMsgAsync({ formData })).unwrap();
-      await dispatch(chatMessageListAsync()).unwrap();
+      const payload = await dispatch(sendMsgAsync({ formData })).unwrap();
 
+      // Append any API response and persist
+      appendFromApiPayload(payload);
+
+      // Clear draft only after success
       setInput("");
+      try {
+        localStorage.removeItem(keyDraft(chatKey));
+      } catch {}
       setUploadedFile(null);
       setPreviewUrl(null);
     } catch (err) {
       console.error("Send failed:", err);
+      // mark the optimistic bubble as failed and persist that too
+      setMessages((prev) => {
+        const next = prev.map((m) =>
+          String(m.id) === String(localId)
+            ? {
+                ...m,
+                text: ((m.text || "") + "\n\n(❗ gagal terkirim)").trim(),
+              }
+            : m
+        );
+        persistNow(next); // <-- persist failure state
+        return next;
+      });
     } finally {
       setSendingMessage(false);
     }
@@ -244,11 +210,10 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
   if (navbar === "settings") return <Settings />;
 
   return (
-    /* Full width & height container, no fixed width/height, no centering box */
     <div className="w-full h-full flex flex-col bg-white md:rounded-none">
       {error && <div className="text-center text-red-500">{error}</div>}
 
-      {/* TOP NAVBAR with selected chat info */}
+      {/* TOP NAVBAR */}
       <div className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
         {selected ? (
           <div className="flex items-center gap-4 p-4">
@@ -262,7 +227,7 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
         )}
       </div>
 
-      {/* MESSAGE LIST: flex-1 scroll area */}
+      {/* MESSAGE LIST */}
       <div ref={listRef} className="flex-1 overflow-y-auto p-5">
         <div className="min-h-full flex flex-col justify-center px-1 space-y-3 pb-4">
           {[...messages]
@@ -272,15 +237,23 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
                 msg.mime_type === "image/jpeg" ||
                 (msg.buttons && msg.buttons.length > 0)
             )
-            .sort((a, b) => (a.id as number) - (b.id as number))
+            .sort((a, b) => {
+              const aNum =
+                typeof a.id === "number"
+                  ? a.id
+                  : Number(String(a.id).replace("local-", ""));
+              const bNum =
+                typeof b.id === "number"
+                  ? b.id
+                  : Number(String(b.id).replace("local-", ""));
+              return aNum - bNum;
+            })
             .map((msg) => {
               const isMe = msg.username === username;
-              const showButtons =
-                !isMe && msg.buttons && msg.buttons.length > 0;
 
               return (
                 <div
-                  key={msg.id}
+                  key={String(msg.id)}
                   className={`flex ${isMe ? "justify-end" : "justify-start"}`}
                 >
                   <div
@@ -289,15 +262,12 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
                         isMe
                           ? "bg-blue-600 text-white rounded-br-none"
                           : "bg-gray-100 text-gray-900 rounded-bl-none"
-                      }`}
+                      }
+                    `}
                     style={{ wordBreak: "break-word" }}
                   >
                     {msg.text && (
-                      <div className="whitespace-pre-wrap">
-                        {msg.text.includes("Mengirim permintaan…")
-                          ? "Sedang diproses.."
-                          : msg.text}
-                      </div>
+                      <div className="whitespace-pre-wrap">{msg.text}</div>
                     )}
 
                     {msg.mime_type === "image/jpeg" && (
@@ -307,15 +277,6 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
                         className="max-w-full rounded-lg shadow-lg mt-2"
                         onLoad={scrollSmart}
                         onClick={(e) => e.stopPropagation()}
-                      />
-                    )}
-
-                    {showButtons && (
-                      <InlineKeyboard
-                        buttons={msg.buttons}
-                        disabledAll={false}
-                        loadingId={pendingByMsg[String(msg.id)] ?? null}
-                        onClick={(b) => handleInlineClick(b, msg)}
                       />
                     )}
 
@@ -343,69 +304,39 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
         </div>
       </div>
 
-      {/* COMPOSER: fixed at bottom inside this component, not sticky to viewport */}
+      {/* COMPOSER */}
       <div className="mt-3 flex flex-wrap items-center gap-4 border p-2 rounded-md bg-gray-50">
-        {uploadedFile && (
-          <div className="flex items-center space-x-4 border p-2 rounded-md bg-gray-50">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="preview"
-                className="w-16 h-16 object-cover rounded"
-              />
-            ) : (
-              <div className="text-gray-700">📎 {uploadedFile.name}</div>
-            )}
-            <button
-              onClick={() => {
-                setUploadedFile(null);
-                setPreviewUrl(null);
-              }}
-              className="text-red-500 hover:underline text-sm"
-              disabled={sendingMessage}
-            >
-              Remove
-            </button>
-          </div>
-        )}
-
-        <label
-          className={`cursor-pointer px-3 py-2 rounded-md ${
-            sendingMessage
-              ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-              : "bg-gray-200 hover:bg-gray-300 text-gray-700"
-          }`}
-        >
-          📎
-          <input
-            type="file"
-            className="hidden"
-            accept="image/png, image/jpeg, .gif"
-            disabled={sendingMessage}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) handleFileUpload(file);
-            }}
-          />
-        </label>
-
         <input
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setInput(v);
+            try {
+              localStorage.setItem(keyDraft(chatKey), v); // <-- save draft immediately
+            } catch (err) {
+              console.warn("Failed to persist draft:", err);
+            }
+          }}
           onKeyDown={(e) =>
             !sendingMessage && e.key === "Enter" && handleSubmit()
           }
-          disabled={sendingMessage}
+          disabled={sendingMessage || !selected}
           className="flex-1 border rounded-md px-3 py-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder={sendingMessage ? "Sending..." : "Type /start to begin"}
+          placeholder={
+            !selected
+              ? "Select a chat"
+              : sendingMessage
+              ? "Sending..."
+              : `${selected.name}`
+          }
         />
 
         <button
           onClick={handleSubmit}
-          disabled={sendingMessage}
+          disabled={sendingMessage || !selected}
           className={`px-4 py-2 rounded text-white transition ${
-            sendingMessage
+            sendingMessage || !selected
               ? "bg-blue-400 cursor-not-allowed"
               : "bg-blue-500 hover:bg-blue-600"
           } flex items-center gap-2`}

@@ -12,6 +12,7 @@ export type ChatItem = {
   name: string;
   lastMessage: string;
   time: string;
+  command: string;
   type?: string;
 };
 
@@ -21,6 +22,7 @@ const INITIAL_CHATS: ChatItem[] = [
     name: "Hasil Pencarian",
     lastMessage: "",
     time: "00:00",
+    command: "/result",
     type: "result",
   },
   {
@@ -28,6 +30,7 @@ const INITIAL_CHATS: ChatItem[] = [
     name: "CEK KK",
     lastMessage: "",
     time: "00:00",
+    command: "/cek KK",
     type: "cekkk",
   },
   {
@@ -35,6 +38,7 @@ const INITIAL_CHATS: ChatItem[] = [
     name: "NIK",
     lastMessage: "",
     time: "00:00",
+    command: "/cek NIK",
     type: "nik",
   },
   {
@@ -42,6 +46,7 @@ const INITIAL_CHATS: ChatItem[] = [
     name: "Profiling",
     lastMessage: "",
     time: "00:00",
+    command: "/profiling",
     type: "profiling",
   },
   {
@@ -49,6 +54,7 @@ const INITIAL_CHATS: ChatItem[] = [
     name: "Perusahaan",
     lastMessage: "",
     time: "00:00",
+    command: "-",
     type: "perusahaan",
   },
 ];
