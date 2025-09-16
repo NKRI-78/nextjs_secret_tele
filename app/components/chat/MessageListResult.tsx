@@ -80,6 +80,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
     socket.emit("room:lobby:join", "Hello");
 
     const handler = (msg: any) => {
+      console.log("socket masuk", msg)
       try {
         const parsed: BotResult = JSON.parse(msg);
         const dataMsg: BotResult = {
