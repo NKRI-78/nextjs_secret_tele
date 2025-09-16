@@ -18,6 +18,8 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [lastQuery, setLastQuery] = useState(""); // NEW: freeze the submitted text
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -45,18 +47,20 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
 
   const handleSubmit = async () => {
     if (sendingMessage) return;
-    if (!input.trim()) return; // file not used for company search
+    const q = input.trim();
+    if (!q) return; // file not used for company search
 
     setSendingMessage(true);
+    setHasSearched(true);
+    setLastQuery(q); // NEW: remember what was searched
+
     try {
       const formData = new FormData();
-      formData.append("search", input.trim());
+      formData.append("search", q);
 
-      await dispatch(
-        chatMessageListCompanyAsync({ formData: formData })
-      ).unwrap();
+      await dispatch(chatMessageListCompanyAsync({ formData })).unwrap();
 
-      setInput("");
+      setInput(""); // keep this if you like clearing after search
       setUploadedFile(null);
       setPreviewUrl(null);
       scrollSmart();
@@ -68,6 +72,10 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
   };
 
   if (navbar === "settings") return <Settings />;
+
+  const showNoResult =
+    !loading && hasSearched && (!company || company.length === 0);
+  const noResultLabel = lastQuery || input.trim() || "company"; // NEW: use typed text
 
   return (
     <div className="w-full h-full flex flex-col bg-white md:rounded-none">
@@ -100,6 +108,16 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
                   </li>
                 ))}
               </ul>
+            </div>
+          ) : showNoResult ? (
+            <div className="flex-1 grid place-items-center">
+              <div className="text-center text-sm text-gray-500">
+                <div className="text-base font-medium text-gray-600">
+                  {/* NEW: reflect user-typed query */}
+                  {noResultLabel} no result found
+                </div>
+                <p>Coba gunakan kata kunci lain.</p>
+              </div>
             </div>
           ) : (
             !loading && (
