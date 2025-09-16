@@ -327,7 +327,7 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
               ? "Select a chat"
               : sendingMessage
               ? "Sending..."
-              : `${selected.name}`
+              : `${selected.placeholder}`
           }
         />
 

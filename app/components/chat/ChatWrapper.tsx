@@ -14,6 +14,7 @@ export type ChatItem = {
   time: string;
   command: string;
   type?: string;
+  placeholder: string;
 };
 
 const INITIAL_CHATS: ChatItem[] = [
@@ -24,6 +25,7 @@ const INITIAL_CHATS: ChatItem[] = [
     time: "00:00",
     command: "/result",
     type: "result",
+    placeholder: "result",
   },
   {
     id: "2",
@@ -32,6 +34,7 @@ const INITIAL_CHATS: ChatItem[] = [
     time: "00:00",
     command: "/cek KK",
     type: "cekkk",
+    placeholder: "No KK",
   },
   {
     id: "3",
@@ -40,6 +43,7 @@ const INITIAL_CHATS: ChatItem[] = [
     time: "00:00",
     command: "/nik",
     type: "nik",
+    placeholder: "No NIK",
   },
   {
     id: "4",
@@ -48,6 +52,7 @@ const INITIAL_CHATS: ChatItem[] = [
     time: "00:00",
     command: "/profiling",
     type: "profiling",
+    placeholder: "No HP",
   },
   {
     id: "5",
@@ -56,6 +61,7 @@ const INITIAL_CHATS: ChatItem[] = [
     time: "00:00",
     command: "-",
     type: "perusahaan",
+    placeholder: "perusahaan",
   },
 ];
 
