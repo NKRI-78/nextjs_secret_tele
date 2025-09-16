@@ -32,7 +32,7 @@ const INITIAL_CHATS: ChatItem[] = [
     name: "CEK KK",
     lastMessage: "",
     time: "00:00",
-    command: "/cek KK",
+    command: "/kk",
     type: "cekkk",
     placeholder: "No KK",
   },
