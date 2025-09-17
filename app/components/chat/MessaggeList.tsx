@@ -319,7 +319,7 @@ const MessageList = ({
           )}
         </div>
 
-        {/* COMPOSER di bawah hanya tampil kalau ada pesan */}
+        {/* COMPOSER di bawah hanya tampil kalau ada pesan
         {messages.length > 0 && (
           <div className="bg-cyber/80 backdrop-blur-md p-4">
             <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
@@ -380,7 +380,7 @@ const MessageList = ({
               </button>
             </div>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );
