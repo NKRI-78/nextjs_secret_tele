@@ -107,8 +107,11 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
       </div>
 
       {/* MESSAGE LIST: flex-1 scroll area */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
-        <div className="min-h-full flex flex-col items-center justify-center px-1 space-y-6 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
+      <div
+        ref={listRef}
+        className="flex-1 overflow-y-auto p-5 bg-cyber  bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat"
+      >
+        <div className="min-h-full flex flex-col justify-center px-1 space-y-6">
           {[...messages]
             .filter(
               (msg) =>

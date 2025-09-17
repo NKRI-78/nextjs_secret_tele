@@ -65,17 +65,18 @@ export const ChatMessageListCompany = async (formData: FormData) => {
 export const SendMessage = async (formData: FormData) => {
   try {
     const token = Cookies.get("token");
-    await api.post(`/send`, formData, {
+    const rsponse = await api.post(`/send`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${token}`,
       },
     });
+    return rsponse;
   } catch (e: any) {
     Swal.fire({
       icon: "error",
       title: "Error",
-      text: e?.response?.data?.message || e.message,
+      text: (e?.response?.data?.detail || e.message).replace("401:", ""),
       timer: 2000,
       showConfirmButton: false,
     });
