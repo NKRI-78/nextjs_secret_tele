@@ -232,145 +232,155 @@ const MessageList = ({
         )}
       </div>
 
-      {/* MESSAGE LIST */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
-        <div className="min-h-full flex flex-col justify-center px-1 space-y-3 pb-4 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
-          {[...messages]
-            .filter(
-              (msg) =>
-                (msg.text && msg.text.trim() !== "") ||
-                msg.mime_type === "image/jpeg" ||
-                (msg.buttons && msg.buttons.length > 0)
-            )
-            .sort((a, b) => {
-              const aNum =
-                typeof a.id === "number"
-                  ? a.id
-                  : Number(String(a.id).replace("local-", ""));
-              const bNum =
-                typeof b.id === "number"
-                  ? b.id
-                  : Number(String(b.id).replace("local-", ""));
-              return aNum - bNum;
-            })
-            .map((msg) => {
-              const isMe = msg.username === username;
+      {/* MAIN CHAT AREA */}
+      <div className="flex flex-col flex-1">
+        {/* MESSAGE LIST */}
+        <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
+          {messages.length === 0 ? (
+            <div className="min-h-full flex flex-col items-center justify-center px-1 space-y-6 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
+              <h1 className="text-2xl font-semibold text-white text-center">
+                {selected?.name}
+                <br />
+                <h3 className="text-sm font-normal text-gray-200">
+                  {selected?.name === "Kartu Keluarga"
+                    ? "Masukkan nomor kartu keluarga kamu dengan benar"
+                    : selected?.name === "NIK"
+                    ? "Isi NIK sesuai KTP agar datamu valid"
+                    : selected?.name === "Profiling Number"
+                    ? "Masukkan nomor telepon kamu dengan benar"
+                    : "Isi data dengan benar agar proses berjalan lancar"}
+                </h3>
+              </h1>
 
-              return (
-                <div
-                  key={String(msg.id)}
-                  className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              {/* Composer di tengah */}
+              <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={input}
+                  onChange={(e) => {
+                    const numeric = e.target.value.replace(/\D/g, ""); // hapus semua non-digit
+                    setInput(numeric); // pakai yang sudah difilter
+                    try {
+                      localStorage.setItem(keyDraft(chatKey), numeric);
+                    } catch (err) {
+                      console.warn("Failed to persist draft:", err);
+                    }
+                  }}
+                  onKeyDown={(e) =>
+                    !sendingMessage && e.key === "Enter" && handleSubmit()
+                  }
+                  disabled={sendingMessage || !selected}
+                  className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder={
+                    !selected
+                      ? "Select a chat"
+                      : sendingMessage
+                      ? "Sending..."
+                      : `${selected.placeholder}`
+                  }
+                />
+                <button
+                  onClick={handleSubmit}
+                  disabled={sendingMessage || !selected}
+                  className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
                 >
-                  <div
-                    className={`relative p-3 rounded-xl max-w-[75%] text-sm leading-snug shadow-md
-                      ${
-                        isMe
-                          ? "bg-chatbot text-white rounded-br-none"
-                          : "bg-chatbot text-gray-900 rounded-bl-none"
-                      }
-                    `}
-                    style={{ wordBreak: "break-word" }}
-                  >
-                    {msg.text && (
-                      <div className="whitespace-pre-wrap">{msg.text} </div>
-                    )}
-
-                    {msg.mime_type === "image/jpeg" && (
-                      <img
-                        src={`${process.env.NEXT_PUBLIC_BASE_URL}/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
-                        alt="Preview"
-                        className="max-w-full rounded-lg shadow-lg mt-2"
-                        onLoad={scrollSmart}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    )}
-
-                    <div
-                      className={`text-[10px] ${
-                        isMe ? "text-white" : "text-gray-400"
-                      } mt-1 text-right select-none`}
+                  {sendingMessage ? (
+                    <svg
+                      className="h-5 w-5 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
                     >
-                      {new Date(msg.date).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-
-                    {/* subtle bubble tail accent */}
-                    <div
-                      className={`absolute -z-10 bottom-0 h-4 w-4 ${
-                        isMe ? "right-2 bg-blue-600" : "left-2 bg-gray-100"
-                      } rounded-full blur-[6px] opacity-30`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-        </div>
-      </div>
-
-      {/* COMPOSER */}
-      <div className="flex flex-wrap items-center bg-cyber p-5">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => {
-            const v = e.target.value;
-            setInput(v);
-            try {
-              localStorage.setItem(keyDraft(chatKey), v); // <-- save draft immediately
-            } catch (err) {
-              console.warn("Failed to persist draft:", err);
-            }
-          }}
-          onKeyDown={(e) =>
-            !sendingMessage && e.key === "Enter" && handleSubmit()
-          }
-          disabled={sendingMessage || !selected}
-          className="flex-1 border rounded-md px-3 py-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder={
-            !selected
-              ? "Select a chat"
-              : sendingMessage
-              ? "Sending..."
-              : `${selected.placeholder}`
-          }
-        />
-
-        <button
-          onClick={handleSubmit}
-          disabled={sendingMessage || !selected}
-          className={`px-4 py-2 ml-4 bg-submit-chatbot rounded text-white transition ${
-            sendingMessage || !selected
-          } flex items-center gap-2`}
-        >
-          {sendingMessage ? (
-            <>
-              <svg
-                className="h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                />
-              </svg>
-              Sending...
-            </>
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                      />
+                    </svg>
+                  ) : (
+                    "➤"
+                  )}
+                </button>
+              </div>
+            </div>
           ) : (
-            "Submit"
+            // === MODE ADA PESAN ===
+            <div className="min-h-full flex flex-col justify-end space-y-3 pb-32 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
+              {/* ... render messages here ... */}
+            </div>
           )}
-        </button>
+        </div>
+
+        {/* COMPOSER di bawah hanya tampil kalau ada pesan */}
+        {messages.length > 0 && (
+          <div className="bg-cyber/80 backdrop-blur-md p-4">
+            <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
+              <input
+                type="tel"
+                inputMode="numeric"
+                value={input}
+                onChange={(e) => {
+                  const numeric = e.target.value.replace(/\D/g, ""); // hapus semua non-digit
+                  setInput(numeric);
+                   try {
+                      localStorage.setItem(keyDraft(chatKey), numeric);
+                    } catch (err) {
+                      console.warn("Failed to persist draft:", err);
+                    }
+                }}
+                onKeyDown={(e) =>
+                  !sendingMessage && e.key === "Enter" && handleSubmit()
+                }
+                disabled={sendingMessage || !selected}
+                className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                placeholder={
+                  !selected
+                    ? "Select a chat"
+                    : sendingMessage
+                    ? "Sending..."
+                    : `${selected.placeholder}`
+                }
+              />
+              <button
+                onClick={handleSubmit}
+                disabled={sendingMessage || !selected}
+                className="h-10 w-10 flex items-center justify-center rounded-full bg-submit-chatbot text-white disabled:opacity-50 hover:scale-105 transition"
+              >
+                {sendingMessage ? (
+                  <svg
+                    className="h-5 w-5 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                ) : (
+                  "➤"
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

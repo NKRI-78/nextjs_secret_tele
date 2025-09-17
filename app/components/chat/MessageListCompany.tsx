@@ -78,147 +78,109 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
   const noResultLabel = lastQuery || input.trim() || "company"; // NEW: use typed text
 
   return (
-    <div className="w-full h-full flex flex-col bg-white md:rounded-none">
+    <div className="w-full h-full flex flex-col md:rounded-none bg-cyber">
       {error && <div className="text-center text-red-500">{error}</div>}
 
-      {/* RESULTS LIST */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
-        <div className="min-h-full flex flex-col space-y-3">
-          {loading && (
-            <div className="flex-1 grid place-items-center">
-              <div className="text-center text-sm text-gray-500">
+      {/* WRAPPER DENGAN BACKGROUND GAMBAR */}
+      <div className="flex-1 flex flex-col bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
+        {/* LIST RESULT */}
+        <div ref={listRef} className="flex-1 overflow-y-auto p-5">
+          <div className="min-h-full flex flex-col justify-center items-center space-y-6">
+            {loading && (
+              <div className="text-center">
                 <div className="text-base font-medium text-white">
                   Memuat...
                 </div>
               </div>
-            </div>
-          )}
-
-          {company && company.length > 0 ? (
-            <div className="rounded-lg border bg-chatbot">
-              <div className="px-4 py-2 text-xs font-semibold text-white border-b">
-                Hasil Pencarian Perusahaan
-              </div>
-              <ul className="p-3 space-y-2 bg-chatbot">
-                {company.map((c) => (
-                  <li key={c.id}>
-                    <a
-                      href={c.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block p-2 rounded result-company hover:bg-cyber "
-                    >
-                      <div className="font-medium text-white">{c.nama}</div>
-                      <div className="text-xs text-gray-300">
-                        {c.prefix} — {c.url}
-                      </div>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : showNoResult ? (
-            <div className="flex-1 grid place-items-center">
-              <div className="text-center text-sm text-gray-500">
-                <div className="text-base font-medium text-gray-600">
-                  {/* NEW: reflect user-typed query */}
-                  {noResultLabel} no result found
-                </div>
-                <p>Coba gunakan kata kunci lain.</p>
-              </div>
-            </div>
-          ) : (
-            !loading && (
-              <div className="flex-1 grid place-items-center">
-                <div className="text-center text-sm text-gray-500">
-                  <div className="text-base font-medium text-white">
-                    Belum ada hasil
-                  </div>
-                  <p className="text-white">
-                    Ketik nama perusahaan di bawah lalu tekan{" "}
-                    <span className="font-medium">Search</span>.
-                  </p>
-                </div>
-              </div>
-            )
-          )}
-        </div>
-      </div>
-
-      {/* COMPOSER */}
-      <div className="flex flex-wrap items-center bg-cyber p-5">
-        {uploadedFile && (
-          <div className="flex items-center space-x-4 border p-2 rounded-md bg-gray-50">
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="preview"
-                className="w-16 h-16 object-cover rounded"
-              />
-            ) : (
-              <div className="text-gray-700">📎 {uploadedFile.name}</div>
             )}
-            <button
-              onClick={() => {
-                setUploadedFile(null);
-                setPreviewUrl(null);
-              }}
-              className="text-red-500 hover:underline text-sm"
+
+            {company && company.length > 0 ? (
+              <div className="rounded-lg border bg-chatbot w-full max-w-3xl">
+                <div className="px-4 py-2 text-xs font-semibold text-white border-b">
+                  Hasil Pencarian Perusahaan
+                </div>
+                <ul className="p-3 space-y-2 bg-chatbot">
+                  {company.map((c) => (
+                    <li key={c.id}>
+                      <a
+                        href={c.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block p-2 rounded result-company hover:bg-cyber"
+                      >
+                        <div className="font-medium text-white">{c.nama}</div>
+                        <div className="text-xs text-gray-300">
+                          {c.prefix} — {c.url}
+                        </div>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : showNoResult ? (
+              <div className="text-center">
+                <div className="text-base font-medium text-white">
+                  {noResultLabel} tidak ditemukan
+                </div>
+                <p className="text-gray-200">Coba gunakan kata kunci lain.</p>
+              </div>
+            ) : (
+              !loading && (
+                <div className="text-center text-gray-200">
+                  Ketik nama perusahaan di bawah lalu tekan{" "}
+                  <span className="font-medium">Search</span>.
+                </div>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* COMPOSER SELALU DI BAWAH */}
+        <div className="border-t border-white/10 bg-cyber/80 backdrop-blur-md p-3">
+          <div className="mx-auto max-w-3xl w-full flex items-center gap-3 rounded-full p-2 shadow-lg bg-cyber/90">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) =>
+                !sendingMessage && e.key === "Enter" && handleSubmit()
+              }
               disabled={sendingMessage}
+              className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              placeholder={sendingMessage ? "Searching..." : "Cari perusahaan…"}
+            />
+
+            <button
+              onClick={handleSubmit}
+              disabled={sendingMessage}
+              className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
             >
-              Remove
+              {sendingMessage ? (
+                <svg
+                  className="h-5 w-5 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                  />
+                </svg>
+              ) : (
+                "➤"
+              )}
             </button>
           </div>
-        )}
-
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) =>
-            !sendingMessage && e.key === "Enter" && handleSubmit()
-          }
-          disabled={sendingMessage}
-          className="flex-1 border rounded-md px-3 py-2 disabled:bg-gray-100 disabled:cursor-not-allowed"
-          placeholder={sendingMessage ? "Searching..." : "Cari perusahaan…"}
-        />
-
-        <button
-          onClick={handleSubmit}
-          disabled={sendingMessage}
-          className={`px-4 py-2 ml-4 bg-submit-chatbot rounded text-white transition ${
-            sendingMessage
-              ? "bg-blue-400 cursor-not-allowed"
-              : "bg-blue-500 hover:bg-blue-600"
-          } flex items-center gap-2`}
-        >
-          {sendingMessage ? (
-            <>
-              <svg
-                className="h-4 w-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                />
-              </svg>
-              Searching...
-            </>
-          ) : (
-            "Search"
-          )}
-        </button>
+        </div>
       </div>
     </div>
   );
