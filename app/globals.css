@@ -125,6 +125,52 @@ p {
   }
 }
 
+.bg-cyber {
+  background-color:#141f33;
+}
+
+.bg-chatbot .result-company:hover {
+ background-color: #0f1727;
+}
+
+.bg-cyber-dark {
+  background-color: #0f1727;
+  color: #ffffff;
+}
+
+.border-radius-cyber-dark {
+  border-radius: 8px;
+}
+
+.bg-cyber-dark-outlined {
+   border: 0.5px solid #ffffff;
+}
+
+.bg-chatbot {
+  background-color: #213040;
+}
+
+.bg-submit-chatbot {
+  background-color: #213040;
+  color: #ffffff;
+}
+
+.border-right-cyber {
+  border-right: 1px solid #213040;
+}
+
+.border-bottom-cyber {
+  border-bottom: 1px solid #213040;
+}
+
+.section-title {
+  padding: 12px;
+  background-color: #0c172b;
+  border: 0.5px solid #ffffffff;
+  color: #fff;
+  border-radius: 8px;
+}
+
 @layer base {
   * {
     @apply border-border;

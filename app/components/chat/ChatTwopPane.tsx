@@ -74,7 +74,7 @@ export default function ResponsiveTwoPane({
 
       {/* Desktop left pane (docked) */}
       <aside
-        className={`hidden md:flex ${leftWidthMd} md:flex-shrink-0 md:flex-col md:border-r md:bg-white`}
+        className={`hidden md:flex ${leftWidthMd} md:flex-shrink-0 md:flex-col border-right-cyber`}
         aria-label={leftLabel}
       >
         {children.left}

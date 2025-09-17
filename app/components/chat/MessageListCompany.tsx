@@ -82,26 +82,34 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
       {error && <div className="text-center text-red-500">{error}</div>}
 
       {/* RESULTS LIST */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-5">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
         <div className="min-h-full flex flex-col space-y-3">
-          {loading && <div className="text-xs text-gray-500">Memuat data…</div>}
+          {loading && (
+            <div className="flex-1 grid place-items-center">
+              <div className="text-center text-sm text-gray-500">
+                <div className="text-base font-medium text-white">
+                  Memuat...
+                </div>
+              </div>
+            </div>
+          )}
 
           {company && company.length > 0 ? (
-            <div className="rounded-lg border bg-gray-50">
-              <div className="px-4 py-2 text-xs font-semibold text-gray-600 border-b">
+            <div className="rounded-lg border bg-chatbot">
+              <div className="px-4 py-2 text-xs font-semibold text-white border-b">
                 Hasil Pencarian Perusahaan
               </div>
-              <ul className="p-3 space-y-2">
+              <ul className="p-3 space-y-2 bg-chatbot">
                 {company.map((c) => (
                   <li key={c.id}>
                     <a
                       href={c.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="block p-2 rounded hover:bg-white"
+                      className="block p-2 rounded result-company hover:bg-cyber "
                     >
-                      <div className="font-medium">{c.nama}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="font-medium text-white">{c.nama}</div>
+                      <div className="text-xs text-gray-300">
                         {c.prefix} — {c.url}
                       </div>
                     </a>
@@ -123,10 +131,10 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
             !loading && (
               <div className="flex-1 grid place-items-center">
                 <div className="text-center text-sm text-gray-500">
-                  <div className="text-base font-medium text-gray-600">
+                  <div className="text-base font-medium text-white">
                     Belum ada hasil
                   </div>
-                  <p>
+                  <p className="text-white">
                     Ketik nama perusahaan di bawah lalu tekan{" "}
                     <span className="font-medium">Search</span>.
                   </p>
@@ -138,7 +146,7 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
       </div>
 
       {/* COMPOSER */}
-      <div className="mt-3 flex flex-wrap items-center gap-4 border p-2 rounded-md bg-gray-50">
+      <div className="flex flex-wrap items-center bg-cyber p-5">
         {uploadedFile && (
           <div className="flex items-center space-x-4 border p-2 rounded-md bg-gray-50">
             {previewUrl ? (
@@ -178,7 +186,7 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
         <button
           onClick={handleSubmit}
           disabled={sendingMessage}
-          className={`px-4 py-2 rounded text-white transition ${
+          className={`px-4 py-2 ml-4 bg-submit-chatbot rounded text-white transition ${
             sendingMessage
               ? "bg-blue-400 cursor-not-allowed"
               : "bg-blue-500 hover:bg-blue-600"

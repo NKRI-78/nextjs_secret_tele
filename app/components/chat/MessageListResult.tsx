@@ -1,38 +1,15 @@
 "use client";
 
-import type {
-  ChatButton,
-  ChatMessage,
-} from "@/app/interfaces/botsecret/answer";
-import {
-  chatMessageListAsync,
-  chatMessageListResultAsync,
-  sendMsgAsync,
-  sendMsgButtonAsync,
-} from "@/redux/slices/chatSlice";
+import { chatMessageListResultAsync } from "@/redux/slices/chatSlice";
 import type { AppDispatch, RootState } from "@redux/store";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
-import { BotResult } from "@/app/interfaces/botsecret/result";
+import { BotResult, BotResultSocket } from "@/app/interfaces/botsecret/result";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
-
-function TopAvatar({ name }: { name: string }) {
-  const ini =
-    name
-      .split(" ")
-      .map((s) => s[0]?.toUpperCase())
-      .slice(0, 2)
-      .join("") || "?";
-  return (
-    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-white flex items-center justify-center text-sm font-semibold">
-      {ini}
-    </div>
-  );
-}
 
 const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -40,19 +17,9 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   const navbar = useSelector((state: RootState) => state.feature.navbar);
 
   const [messages, setMessages] = useState<BotResult[]>([]);
-  const [input, setInput] = useState("");
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // scroll container for messages
   const listRef = useRef<HTMLDivElement>(null);
   const username = "saya";
-
-  // local loadings
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [pendingByMsg, setPendingByMsg] = useState<
-    Record<string, string | null>
-  >({});
 
   useEffect(() => {
     dispatch(chatMessageListResultAsync());
@@ -77,26 +44,24 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   }, [result]);
 
   useEffect(() => {
-    socket.emit("room:lobby:join", "Hello");
+    socket.emit("room:lobby:join", "");
 
     const handler = (msg: any) => {
-      console.log("socket masuk", msg)
       try {
-        const parsed: BotResult = JSON.parse(msg);
+        const parsed: BotResultSocket = JSON.parse(msg);
         const dataMsg: BotResult = {
           id: parsed.id,
           chat_id: parsed.chat_id,
-          created_at: parsed.created_at,
-          file_url: parsed.file_url,
-          message_id: parsed.message_id,
+          created_at: parsed.date,
+          file_url: "",
+          message_id: 0,
           mime_type: parsed.mime_type,
-          result_from: parsed.result_from,
-          result_text: parsed.result_text,
-          updated_at: parsed.updated_at,
+          result_from: "",
+          result_text: parsed.text,
+          updated_at: "",
           username: parsed.username,
         };
         setMessages((prev) => [...prev, dataMsg]);
-        setPendingByMsg({}); // clear inline button loadings after bot reply
       } catch (e) {
         console.error("Invalid JSON in bot_msg:", e);
       }
@@ -119,67 +84,6 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
     scrollSmart();
   }, [messages, scrollSmart]);
 
-  const handleFileUpload = (file: File) => {
-    setUploadedFile(file);
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPreviewUrl(reader.result as string);
-      reader.readAsDataURL(file);
-    } else {
-      setPreviewUrl(null);
-    }
-  };
-
-  const handleInlineClick = useCallback(
-    async (btn: ChatButton, msg: ChatMessage) => {
-      const key = String(msg.id);
-      if (pendingByMsg[key]) return; // prevent double-tap on THAT message
-
-      setPendingByMsg((prev) => ({ ...prev, [key]: btn.data }));
-
-      const formData = new FormData();
-      formData.append("chat", "@OSngrok_bot");
-      formData.append("button_data", btn.data);
-
-      try {
-        await dispatch(sendMsgButtonAsync({ formData })).unwrap();
-        await dispatch(chatMessageListAsync()).unwrap();
-        // loading cleared on socket reply
-      } catch (e) {
-        console.error(e);
-        setPendingByMsg((prev) => ({ ...prev, [key]: null }));
-      }
-    },
-    [dispatch, pendingByMsg]
-  );
-
-  const handleSubmit = async () => {
-    if (sendingMessage) return;
-    if (!input.trim() && !uploadedFile) return;
-
-    setSendingMessage(true);
-    try {
-      const formData = new FormData();
-      formData.append("chat", "@OSngrok_bot");
-      formData.append("message", input.trim());
-      if (uploadedFile) {
-        formData.append("file", uploadedFile);
-        formData.append("message", "");
-      }
-
-      await dispatch(sendMsgAsync({ formData })).unwrap();
-      await dispatch(chatMessageListAsync()).unwrap();
-
-      setInput("");
-      setUploadedFile(null);
-      setPreviewUrl(null);
-    } catch (err) {
-      console.error("Send failed:", err);
-    } finally {
-      setSendingMessage(false);
-    }
-  };
-
   if (navbar === "settings") return <Settings />;
 
   return (
@@ -188,12 +92,13 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
       {error && <div className="text-center text-red-500">{error}</div>}
 
       {/* TOP NAVBAR with selected chat info */}
-      <div className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+      <div className="sticky top-0 z-20 border-bottom-cyber bg-cyber backdrop-blur">
         {selected ? (
           <div className="flex items-center gap-4 p-4">
-            <TopAvatar name={selected.name} />
             <div className="min-w-0">
-              <div className="font-medium truncate">{selected.name}</div>
+              <div className="font-medium text-white truncate">
+                {selected.name}
+              </div>
             </div>
           </div>
         ) : (
@@ -202,7 +107,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
       </div>
 
       {/* MESSAGE LIST: flex-1 scroll area */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-5">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
         <div className="min-h-full flex flex-col justify-center px-1 space-y-3 pb-4">
           {[...messages]
             .filter(
@@ -223,8 +128,8 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
                     className={`relative p-3 rounded-xl max-w-[75%] text-sm leading-snug shadow-md
                       ${
                         isMe
-                          ? "bg-blue-600 text-white rounded-br-none"
-                          : "bg-gray-100 text-gray-900 rounded-bl-none"
+                          ? "bg-chatbot text-white rounded-br-none"
+                          : "bg-chatbot text-white rounded-bl-none"
                       }`}
                     style={{ wordBreak: "break-word" }}
                   >
@@ -257,7 +162,6 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
                       })}
                     </div>
 
-                    {/* subtle bubble tail accent */}
                     <div
                       className={`absolute -z-10 bottom-0 h-4 w-4 ${
                         isMe ? "right-2 bg-blue-600" : "left-2 bg-gray-100"

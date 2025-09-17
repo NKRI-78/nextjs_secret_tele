@@ -8,18 +8,14 @@ import { useDispatch, useSelector } from "react-redux";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
 
-function TopAvatar({ name }: { name: string }) {
+function TopAvatar({ name, icon }: { name: string; icon: string }) {
   const ini =
     name
       .split(" ")
       .map((s) => s[0]?.toUpperCase())
       .slice(0, 2)
       .join("") || "?";
-  return (
-    <div className="h-10 w-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 text-white flex items-center justify-center text-sm font-semibold">
-      {ini}
-    </div>
-  );
+  return <img src={icon} width={20} height={20} alt={name} />;
 }
 
 /* ---------- small helpers ---------- */
@@ -34,7 +30,13 @@ const safeParse = <T,>(raw: string | null, fallback: T): T => {
   }
 };
 
-const MessageList = ({ selected }: { selected: ChatItem | null }) => {
+const MessageList = ({
+  selected,
+  onSubmitSuccess,
+}: {
+  selected: ChatItem | null;
+  onSubmitSuccess?: () => void;
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const navbar = useSelector((state: RootState) => state.feature.navbar);
   const { error } = useSelector((state: RootState) => state.chat);
@@ -124,7 +126,7 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
     if (normalized.length) {
       setMessages((prev) => {
         const next = [...prev, ...normalized];
-        persistNow(next); // <-- persist immediately
+        // persistNow(next); // <-- persist immediately
         return next;
       });
     }
@@ -157,7 +159,7 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
     // Append + persist synchronously
     setMessages((prev) => {
       const next = [...prev, myMsg];
-      persistNow(next); // <-- persist immediately when you add
+      // persistNow(next); // <-- persist immediately when you add
       return next;
     });
 
@@ -182,10 +184,12 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
 
       // Clear draft only after success
       setInput("");
-      localStorage.removeItem(keyDraft(chatKey));
+      // localStorage.removeItem(keyDraft(chatKey));
 
       setUploadedFile(null);
       setPreviewUrl(null);
+
+      onSubmitSuccess?.();
     } catch (err) {
       console.error("Send failed:", err);
       // mark the optimistic bubble as failed and persist that too
@@ -198,7 +202,7 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
               }
             : m
         );
-        persistNow(next); // <-- persist failure state
+        // persistNow(next); // <-- persist failure state
         return next;
       });
     } finally {
@@ -213,12 +217,14 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
       {error && <div className="text-center text-red-500">{error}</div>}
 
       {/* TOP NAVBAR */}
-      <div className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+      <div className="sticky top-0 z-20 border-bottom-cyber bg-white/80 backdrop-blur">
         {selected ? (
-          <div className="flex items-center gap-4 p-4">
-            <TopAvatar name={selected.name} />
+          <div className="flex items-center gap-4 p-4 bg-cyber">
+            <TopAvatar name={selected.name} icon={selected.icon} />
             <div className="min-w-0">
-              <div className="font-medium truncate">{selected.name}</div>
+              <div className="font-medium text-white truncate">
+                {selected.name}
+              </div>
             </div>
           </div>
         ) : (
@@ -227,7 +233,7 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
       </div>
 
       {/* MESSAGE LIST */}
-      <div ref={listRef} className="flex-1 overflow-y-auto p-5">
+      <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
         <div className="min-h-full flex flex-col justify-center px-1 space-y-3 pb-4">
           {[...messages]
             .filter(
@@ -259,14 +265,14 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
                     className={`relative p-3 rounded-xl max-w-[75%] text-sm leading-snug shadow-md
                       ${
                         isMe
-                          ? "bg-blue-600 text-white rounded-br-none"
-                          : "bg-gray-100 text-gray-900 rounded-bl-none"
+                          ? "bg-chatbot text-white rounded-br-none"
+                          : "bg-chatbot text-gray-900 rounded-bl-none"
                       }
                     `}
                     style={{ wordBreak: "break-word" }}
                   >
                     {msg.text && (
-                      <div className="whitespace-pre-wrap">{msg.text}</div>
+                      <div className="whitespace-pre-wrap">{msg.text} </div>
                     )}
 
                     {msg.mime_type === "image/jpeg" && (
@@ -304,7 +310,7 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
       </div>
 
       {/* COMPOSER */}
-      <div className="mt-3 flex flex-wrap items-center gap-4 border p-2 rounded-md bg-gray-50">
+      <div className="flex flex-wrap items-center bg-cyber p-5">
         <input
           type="text"
           value={input}
@@ -334,10 +340,8 @@ const MessageList = ({ selected }: { selected: ChatItem | null }) => {
         <button
           onClick={handleSubmit}
           disabled={sendingMessage || !selected}
-          className={`px-4 py-2 rounded text-white transition ${
+          className={`px-4 py-2 ml-4 bg-submit-chatbot rounded text-white transition ${
             sendingMessage || !selected
-              ? "bg-blue-400 cursor-not-allowed"
-              : "bg-blue-500 hover:bg-blue-600"
           } flex items-center gap-2`}
         >
           {sendingMessage ? (
