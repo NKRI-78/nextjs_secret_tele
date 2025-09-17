@@ -27,7 +27,7 @@ const Login: React.FC = () => {
       loginBotSecretAsync({ val, password })
     ).unwrap();
 
-    Cookies.set("username", result.data.user.name, {
+    Cookies.set("username", result.data.email, {
       expires: 365,
       secure: true,
       sameSite: "strict",
