@@ -194,8 +194,6 @@ const MessageList = ({
       if (payload?.status == 200) {
         onSubmitSuccess?.();
       }
-
-      //      onSubmitSuccess?.();
     } catch (err) {
       console.error("Send failed:", err);
       // mark the optimistic bubble as failed and persist that too
@@ -261,13 +259,13 @@ const MessageList = ({
                 inputMode="numeric"
                 value={input}
                 onChange={(e) => {
-                  const numeric = e.target.value.replace(/\D/g, ""); // hapus semua non-digit
-                  setInput(numeric); // pakai yang sudah difilter
-                  try {
-                    localStorage.setItem(keyDraft(chatKey), numeric);
-                  } catch (err) {
-                    console.warn("Failed to persist draft:", err);
-                  }
+                  const numeric = e.target.value.replace(/\D/g, "");
+                  setInput(numeric);
+                  // try {
+                  //   localStorage.setItem(keyDraft(chatKey), numeric);
+                  // } catch (err) {
+                  //   console.warn("Failed to persist draft:", err);
+                  // }
                 }}
                 onKeyDown={(e) =>
                   !sendingMessage && e.key === "Enter" && handleSubmit()

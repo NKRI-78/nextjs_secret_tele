@@ -111,7 +111,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         ref={listRef}
         className="flex-1 overflow-y-auto p-5 bg-cyber  bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat"
       >
-        <div className="min-h-full flex flex-col justify-center px-1 space-y-6">
+        <div className="min-h-full flex flex-col justify-center px-1 space-y-3">
           {[...messages]
             .filter(
               (msg) =>
@@ -119,8 +119,14 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
                 msg.mime_type === "image/jpeg"
             )
             .sort((a, b) => (a.id as number) - (b.id as number))
-            .map((msg) => {
+            .map((msg, i) => {
               const isMe = msg.username === username;
+
+              if (
+                msg.result_text.includes("Mengirim permintaan") &&
+                i != messages.length - 1
+              )
+                return null;
 
               return (
                 <div
@@ -136,13 +142,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
                       }`}
                     style={{ wordBreak: "break-word" }}
                   >
-                    {msg.result_text && (
-                      <div className="whitespace-pre-wrap">
-                        {msg.result_text.includes("Mengirim permintaan…")
-                          ? "Sedang diproses.."
-                          : msg.result_text}
-                      </div>
-                    )}
+                    <div className="whitespace-pre-wrap">{msg.result_text}</div>
 
                     {msg.mime_type === "image/jpeg" && (
                       <img
