@@ -2,7 +2,7 @@
 
 import { chatMessageListResultAsync } from "@/redux/slices/chatSlice";
 import type { AppDispatch, RootState } from "@redux/store";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
@@ -11,6 +11,902 @@ import { BotResult, BotResultSocket } from "@/app/interfaces/botsecret/result";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
 
+// ---------------------------
+// Parsing helpers (NIK-style)
+// ---------------------------
+type ParsedRecord = { [key: string]: string };
+
+const FIELD_ORDER = [
+  "NIK",
+  "NKK",
+  "NAMA",
+  "TTL",
+  "JK",
+  "NIK IBU",
+  "NAMA IBU",
+  "NIK AYAH",
+  "NAMA AYAH",
+  "ALAMAT",
+];
+
+const FIELD_LABELS: Record<string, string> = {
+  NIK: "NIK",
+  NKK: "NKK",
+  NAMA: "Nama",
+  TTL: "Tempat/Tanggal Lahir",
+  JK: "Jenis Kelamin",
+  "NIK IBU": "NIK Ibu",
+  "NAMA IBU": "Nama Ibu",
+  "NIK AYAH": "NIK Ayah",
+  "NAMA AYAH": "Nama Ayah",
+  ALAMAT: "Alamat",
+};
+
+function stripCodeFence(raw: string): string {
+  let s = (raw || "").trim();
+  if (s.startsWith("```")) s = s.slice(3);
+  if (s.endsWith("```")) s = s.slice(0, -3);
+  s = s.replace(/\.::DON'T SHARE ANYWHERE::.\.?/gi, "").trim();
+  return s;
+}
+
+function parsePopulationResult(rawText: string): ParsedRecord[] {
+  if (!rawText) return [];
+  const text = stripCodeFence(rawText);
+
+  const lines = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (lines.length === 0) return [];
+
+  const indices: number[] = [];
+  lines.forEach((l, i) => {
+    if (/^NO\.\s*\d+/i.test(l)) indices.push(i);
+  });
+
+  const recordBlocks: string[][] = [];
+  if (indices.length === 0) {
+    recordBlocks.push(lines);
+  } else {
+    for (let i = 0; i < indices.length; i++) {
+      const start = indices[i];
+      const end = i + 1 < indices.length ? indices[i + 1] : lines.length;
+      recordBlocks.push(lines.slice(start, end));
+    }
+  }
+
+  const records: ParsedRecord[] = [];
+
+  for (const block of recordBlocks) {
+    const rec: ParsedRecord = {};
+    for (const line of block) {
+      if (/^--\s*Found\s*Page/i.test(line)) continue;
+      if (/^NO\.\s*\d+/i.test(line)) continue;
+
+      const m = line.match(/^([A-Z .]+?)\s*:\s*(.*)$/i);
+      if (m) {
+        let key = m[1].trim().toUpperCase();
+        let val = (m[2] || "").trim();
+
+        key = key
+          .replace(/\s+/g, " ")
+          .replace(/IBU\s*$/i, "IBU")
+          .replace(/AYAH\s*$/i, "AYAH");
+
+        rec[key] = val;
+      }
+    }
+
+    const hasAny =
+      Object.keys(rec).length > 0 || block.some((l) => /^NIK\s*:\s*/i.test(l));
+
+    if (hasAny) {
+      if (!rec["NIK"]) {
+        const nikLine = block.find((l) => /^NIK\s*:\s*/i.test(l));
+        if (nikLine) {
+          rec["NIK"] = nikLine.split(":").slice(1).join(":").trim();
+        }
+      }
+      records.push(rec);
+    }
+  }
+
+  if (records.length === 0) {
+    const nikOnly = text.match(/NIK\s*:\s*([0-9]+)/i);
+    if (nikOnly) records.push({ NIK: nikOnly[1] });
+  }
+
+  return records;
+}
+
+// ---------------------------
+// Parsing helpers (Generic Phone/Wallet/Database)
+// ---------------------------
+type Person = { Name?: string; Email?: string; Phone?: string; DOB?: string };
+type Wallets = Record<string, string>;
+type GenericParsed = {
+  found: boolean;
+  queryPhone?: string;
+  contact?: string;
+  regData?: string;
+  wallets?: Wallets;
+  people: Person[];
+  expedition?: string;
+  recidivist?: string;
+  vehicle?: string;
+};
+
+function readSection(
+  lines: string[],
+  startIdx: number
+): { end: number; rows: string[] } {
+  const rows: string[] = [];
+  let i = startIdx;
+  for (; i < lines.length; i++) {
+    const l = lines[i].trim();
+    if (!l) {
+      if (rows.length) break;
+      else continue;
+    }
+    if (/^[A-Za-z ]+information\s*:/i.test(l) && i !== startIdx) break;
+    if (
+      /^(Contact|Reg Data|Detail from Family Number Data)/i.test(l) &&
+      i !== startIdx
+    )
+      break;
+    rows.push(l);
+  }
+  return { end: i, rows };
+}
+
+function parseGeneric(rawText: string): GenericParsed {
+  const out: GenericParsed = { found: false, people: [] };
+  const text = stripCodeFence(rawText);
+  const lines = text.split(/\r?\n/).map((s) => s.trim());
+
+  if (!lines.length) return out;
+
+  const phoneLine = lines.find((l) => /^Phone\s+\S+/i.test(l));
+  if (phoneLine) {
+    const m = phoneLine.match(/^Phone\s+(.+)$/i);
+    if (m) out.queryPhone = m[1].trim();
+  }
+
+  const contactIdx = lines.findIndex((l) => /^Contact\s*:/i.test(l));
+  if (contactIdx >= 0) {
+    const next = lines[contactIdx + 1] || "";
+    out.contact = next || "-";
+  }
+
+  const regIdx = lines.findIndex((l) => /^Reg Data\s*:/i.test(l));
+  if (regIdx >= 0) {
+    const { rows } = readSection(lines, regIdx + 1);
+    out.regData = rows.join(" ") || lines[regIdx + 1] || "";
+  }
+
+  const wIdx = lines.findIndex((l) => /^Wallet information\s*:/i.test(l));
+  if (wIdx >= 0) {
+    const { rows } = readSection(lines, wIdx + 1);
+    const wallets: Wallets = {};
+    for (const r of rows) {
+      const m = r.match(/^([A-Za-z]+)\s+(.+)$/);
+      if (m) wallets[m[1].toUpperCase()] = m[2].trim();
+    }
+    if (Object.keys(wallets).length) out.wallets = wallets;
+  }
+
+  const dIdx = lines.findIndex((l) => /^Database information\s*:/i.test(l));
+  if (dIdx >= 0) {
+    const { rows } = readSection(lines, dIdx + 1);
+    let current: Person | null = null;
+    const pushCurrent = () => {
+      if (current && Object.values(current).some(Boolean))
+        out.people.push(current);
+      current = null;
+    };
+    for (const r of rows) {
+      if (!r) {
+        pushCurrent();
+        continue;
+      }
+      const kv = r.match(/^([A-Za-z ]+)\s*:\s*(.*)$/);
+      if (kv) {
+        const key = kv[1].trim().toLowerCase();
+        const val = kv[2].trim();
+        if (key === "name") {
+          pushCurrent();
+          current = { Name: val };
+        } else {
+          if (!current) current = {};
+          if (key === "email") current.Email = val;
+          else if (key === "phone") current.Phone = val;
+          else if (key === "dob") current.DOB = val;
+        }
+      }
+    }
+    pushCurrent();
+  }
+
+  const eIdx = lines.findIndex((l) => /^Expedition information\s*:/i.test(l));
+  if (eIdx >= 0) out.expedition = readSection(lines, eIdx + 1).rows.join(" ");
+
+  const rIdx = lines.findIndex((l) => /^Recidivist information\s*:/i.test(l));
+  if (rIdx >= 0) out.recidivist = readSection(lines, rIdx + 1).rows.join(" ");
+
+  const vIdx = lines.findIndex((l) => /^Vehicle Information\s*:/i.test(l));
+  if (vIdx >= 0) out.vehicle = readSection(lines, vIdx + 1).rows.join(" ");
+
+  out.found =
+    !!out.queryPhone ||
+    !!out.contact ||
+    !!out.regData ||
+    !!out.wallets ||
+    out.people.length > 0 ||
+    !!out.expedition ||
+    !!out.recidivist ||
+    !!out.vehicle;
+
+  return out;
+}
+
+// ---------------------------
+// Parsing helpers (KK / Family Number)
+// ---------------------------
+type KKMember = {
+  NIK?: string;
+  NAMA_LENGKAP?: string;
+  TTL?: string;
+  JK?: string; // JENIS KELAMIN
+  SHK?: string; // STATUS HUBUNGAN KELUARGA
+  STATUS_PERKAWINAN?: string;
+  AGAMA?: string;
+  GOLONGAN_DARAH?: string;
+  PENDIDIKAN_TERAKHIR?: string;
+  PEKERJAAN?: string;
+  ALAMAT?: string;
+  PROVINSI?: string;
+  KABUPATEN?: string;
+  KECAMATAN?: string;
+  KELURAHAN?: string;
+  NKK?: string;
+};
+
+type KKParsed = {
+  found: boolean;
+  nkk?: string;
+  area?: {
+    ALAMAT?: string;
+    PROVINSI?: string;
+    KABUPATEN?: string;
+    KECAMATAN?: string;
+    KELURAHAN?: string;
+  };
+  members: KKMember[];
+};
+
+function normalizeKeyKK(k: string): keyof KKMember | "OTHER" {
+  const t = k.trim().toUpperCase();
+  if (t === "NIK") return "NIK";
+  if (t === "NKK") return "NKK";
+  if (t === "NAMA LENGKAP") return "NAMA_LENGKAP";
+  if (t === "TTL") return "TTL";
+  if (t === "JENIS KELAMIN") return "JK";
+  if (t === "STATUS HUBUNGAN KELUARGA") return "SHK";
+  if (t === "STATUS PERKAWINAN") return "STATUS_PERKAWINAN";
+  if (t === "AGAMA") return "AGAMA";
+  if (t === "GOLONGAN DARAH") return "GOLONGAN_DARAH";
+  if (t === "PENDIDIKAN TERAKHIR") return "PENDIDIKAN_TERAKHIR";
+  if (t === "PEKERJAAN") return "PEKERJAAN";
+  if (t === "ALAMAT") return "ALAMAT";
+  if (t === "PROVINSI") return "PROVINSI";
+  if (t === "KABUPATEN") return "KABUPATEN";
+  if (t === "KECAMATAN") return "KECAMATAN";
+  if (t === "KELURAHAN") return "KELURAHAN";
+  return "OTHER";
+}
+
+function parseKK(rawText: string): KKParsed {
+  const out: KKParsed = { found: false, members: [] };
+  const text = stripCodeFence(rawText);
+  const lines = text
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const hasKKHeader =
+    lines.some((l) => /^Detail from Family Number Data/i.test(l)) ||
+    lines.some((l) => /^NIK\s*:/i.test(l) && /^NKK\s*:/i.test(lines.join(" ")));
+  if (!hasKKHeader) return out;
+
+  const memberBlocks: string[][] = [];
+  let curr: string[] = [];
+  for (const line of lines) {
+    if (/^NIK\s*:/i.test(line)) {
+      if (curr.length) memberBlocks.push(curr);
+      curr = [line];
+    } else {
+      if (curr.length) curr.push(line);
+    }
+  }
+  if (curr.length) memberBlocks.push(curr);
+
+  if (!memberBlocks.length) return out;
+
+  const allNKK: string[] = [];
+  const areaVotes = {
+    ALAMAT: new Map<string, number>(),
+    PROVINSI: new Map<string, number>(),
+    KABUPATEN: new Map<string, number>(),
+    KECAMATAN: new Map<string, number>(),
+    KELURAHAN: new Map<string, number>(),
+  };
+
+  const members: KKMember[] = [];
+
+  for (const block of memberBlocks) {
+    const m: KKMember = {};
+    for (const line of block) {
+      const kv = line.match(/^([A-Z .]+?)\s*:\s*(.*)$/i);
+      if (!kv) continue;
+      const rawKey = kv[1].trim();
+      const value = (kv[2] || "").trim();
+      const key = normalizeKeyKK(rawKey);
+
+      if (key !== "OTHER") {
+        (m as any)[key] = value;
+        if (key === "NKK" && value) allNKK.push(value);
+        if (
+          (key === "ALAMAT" ||
+            key === "PROVINSI" ||
+            key === "KABUPATEN" ||
+            key === "KECAMATAN" ||
+            key === "KELURAHAN") &&
+          value
+        ) {
+          const map =
+            key === "ALAMAT"
+              ? areaVotes.ALAMAT
+              : key === "PROVINSI"
+              ? areaVotes.PROVINSI
+              : key === "KABUPATEN"
+              ? areaVotes.KABUPATEN
+              : key === "KECAMATAN"
+              ? areaVotes.KECAMATAN
+              : areaVotes.KELURAHAN;
+          map.set(value, (map.get(value) || 0) + 1);
+        }
+      }
+    }
+    members.push(m);
+  }
+
+  let nkk: string | undefined;
+  if (allNKK.length) {
+    const freq = new Map<string, number>();
+    for (const n of allNKK) freq.set(n, (freq.get(n) || 0) + 1);
+
+    const entries = Array.from(freq.entries());
+    if (entries.length) {
+      entries.sort((a, b) => b[1] - a[1]);
+      nkk = entries[0][0];
+    }
+  }
+
+  function topOf(map: Map<string, number>): string | undefined {
+    const entries = Array.from(map.entries());
+    if (!entries.length) return undefined;
+    entries.sort((a, b) => b[1] - a[1]);
+    return entries[0][0];
+  }
+
+  const area = {
+    ALAMAT: topOf(areaVotes.ALAMAT),
+    PROVINSI: topOf(areaVotes.PROVINSI),
+    KABUPATEN: topOf(areaVotes.KABUPATEN),
+    KECAMATAN: topOf(areaVotes.KECAMATAN),
+    KELURAHAN: topOf(areaVotes.KELURAHAN),
+  };
+
+  out.found = true;
+  out.nkk = nkk || members.find((m) => m.NKK)?.NKK;
+  out.area = area;
+  out.members = members;
+  return out;
+}
+
+// ---------------------------
+// UI pieces
+// ---------------------------
+function CopyBadge({
+  value,
+  label = "Copy",
+}: {
+  value: string;
+  label?: string;
+}) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      className="ml-2 text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
+      onClick={async (e) => {
+        e.stopPropagation();
+        try {
+          await navigator.clipboard.writeText(value);
+          setDone(true);
+          setTimeout(() => setDone(false), 1200);
+        } catch {}
+      }}
+      title={label}
+    >
+      {done ? "Copied" : label}
+    </button>
+  );
+}
+
+function ResultRecordTable({
+  record,
+  index,
+}: {
+  record: ParsedRecord;
+  index: number;
+}) {
+  const known = FIELD_ORDER.filter((k) => record[k] && record[k].trim() !== "");
+  const extras = Object.keys(record)
+    .filter(
+      (k) => !FIELD_ORDER.includes(k) && record[k] && record[k].trim() !== ""
+    )
+    .sort();
+
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10">
+        Record {index + 1}
+      </div>
+      <table className="w-full text-xs">
+        <tbody>
+          {[...known, ...extras].map((key) => {
+            const label = FIELD_LABELS[key] ?? key;
+            const val = record[key];
+            const isNIK = key === "NIK" && val;
+            return (
+              <tr key={key} className="odd:bg-white/0 even:bg-white/5">
+                <td className="w-[34%] px-3 py-2 text-white/80 align-top">
+                  {label}
+                </td>
+                <td className="px-3 py-2 text-white break-words">
+                  <div className="flex items-center">
+                    <span
+                      className={isNIK ? "font-semibold tracking-wide" : ""}
+                    >
+                      {val || "-"}
+                    </span>
+                    {isNIK && val ? <CopyBadge value={val} /> : null}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function ParsedResult({ records }: { records: ParsedRecord[] }) {
+  if (!records.length) return null;
+  return (
+    <div className="mt-2">
+      {records.map((rec, idx) => (
+        <ResultRecordTable key={idx} record={rec} index={idx} />
+      ))}
+    </div>
+  );
+}
+
+function PersonRecordTable({
+  person,
+  index,
+}: {
+  person: Person;
+  index: number;
+}) {
+  const fields: Array<[string, string | undefined]> = [
+    ["Name", person.Name],
+    ["Email", person.Email],
+    ["Phone", person.Phone],
+    ["DOB", person.DOB],
+  ];
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10">
+        Database Record {index + 1}
+      </div>
+      <table className="w-full text-xs">
+        <tbody>
+          {fields.map(([k, v]) => (
+            <tr key={k} className="odd:bg-white/0 even:bg-white/5">
+              <td className="w-[34%] px-3 py-2 text-white/80 align-top">{k}</td>
+              <td className="px-3 py-2 text-white break-words">{v || "-"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function WalletTable({ wallets }: { wallets: Wallets }) {
+  const providers = Object.keys(wallets);
+  if (!providers.length) return null;
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10">
+        Wallet Information
+      </div>
+      <table className="w-full text-xs">
+        <tbody>
+          {providers.map((p) => (
+            <tr key={p} className="odd:bg-white/0 even:bg-white/5">
+              <td className="w-[34%] px-3 py-2 text-white/80 align-top">{p}</td>
+              <td className="px-3 py-2 text-white break-words">{wallets[p]}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// KK Family table
+function KKFamilyTable({
+  nkk,
+  area,
+  members,
+}: {
+  nkk?: string;
+  area?: KKParsed["area"];
+  members: KKMember[];
+}) {
+  return (
+    <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10 flex items-center justify-between">
+        <div>
+          <div className="font-semibold">Kartu Keluarga</div>
+          {nkk ? (
+            <div className="text-[11px] mt-1">
+              NKK: <span className="font-medium">{nkk}</span>{" "}
+              <CopyBadge value={nkk} />
+            </div>
+          ) : null}
+        </div>
+        <div className="text-[11px] text-right leading-tight opacity-90">
+          {area?.ALAMAT ? <div>Alamat: {area.ALAMAT}</div> : null}
+          {area?.KELURAHAN ? <div>Kelurahan: {area.KELURAHAN}</div> : null}
+          {area?.KECAMATAN ? <div>Kecamatan: {area.KECAMATAN}</div> : null}
+          {area?.KABUPATEN ? <div>Kabupaten: {area.KABUPATEN}</div> : null}
+          {area?.PROVINSI ? <div>Provinsi: {area.PROVINSI}</div> : null}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-white/10">
+            <tr>
+              <th className="px-3 py-2 text-left">NIK</th>
+              <th className="px-3 py-2 text-left">Nama</th>
+              <th className="px-3 py-2 text-left">TTL</th>
+              <th className="px-3 py-2 text-left">JK</th>
+              <th className="px-3 py-2 text-left">SHK</th>
+              <th className="px-3 py-2 text-left">Status Kawin</th>
+              <th className="px-3 py-2 text-left">Agama</th>
+              <th className="px-3 py-2 text-left">Gol Darah</th>
+              <th className="px-3 py-2 text-left">Pendidikan</th>
+              <th className="px-3 py-2 text-left">Pekerjaan</th>
+            </tr>
+          </thead>
+          <tbody>
+            {members.map((m, i) => (
+              <tr key={i} className="odd:bg-white/0 even:bg-white/5">
+                <td className="px-3 py-2">
+                  <div className="flex items-center">
+                    <span className="font-medium">{m.NIK || "-"}</span>
+                    {m.NIK ? <CopyBadge value={m.NIK} /> : null}
+                  </div>
+                </td>
+                <td className="px-3 py-2">{m.NAMA_LENGKAP || "-"}</td>
+                <td className="px-3 py-2">{m.TTL || "-"}</td>
+                <td className="px-3 py-2">{m.JK || "-"}</td>
+                <td className="px-3 py-2">{m.SHK || "-"}</td>
+                <td className="px-3 py-2">{m.STATUS_PERKAWINAN || "-"}</td>
+                <td className="px-3 py-2">{m.AGAMA || "-"}</td>
+                <td className="px-3 py-2">{m.GOLONGAN_DARAH || "-"}</td>
+                <td className="px-3 py-2">{m.PENDIDIKAN_TERAKHIR || "-"}</td>
+                <td className="px-3 py-2">{m.PEKERJAAN || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ===========================
+// Helper: Build export text
+// ===========================
+function stringifyRecord(rec: ParsedRecord): string {
+  const lines: string[] = [];
+  const known = FIELD_ORDER.filter((k) => rec[k] && rec[k].trim() !== "");
+  const extras = Object.keys(rec)
+    .filter((k) => !FIELD_ORDER.includes(k) && rec[k] && rec[k].trim() !== "")
+    .sort();
+  for (const k of [...known, ...extras]) {
+    const label = FIELD_LABELS[k] ?? k;
+    lines.push(`${label}: ${rec[k] ?? "-"}`);
+  }
+  return lines.join("\n");
+}
+
+function buildExportText({
+  showKK,
+  kk,
+  showGeneric,
+  generic,
+  showNIK,
+  nikRecords,
+  raw,
+}: {
+  showKK: boolean;
+  kk: KKParsed;
+  showGeneric: boolean;
+  generic: GenericParsed;
+  showNIK: boolean;
+  nikRecords: ParsedRecord[];
+  raw: string;
+}) {
+  if (showKK) {
+    const parts: string[] = [];
+    parts.push("=== KARTU KELUARGA ===");
+    if (kk.nkk) parts.push(`NKK: ${kk.nkk}`);
+    if (kk.area) {
+      const areaLine = [
+        kk.area.ALAMAT ? `Alamat: ${kk.area.ALAMAT}` : "",
+        kk.area.KELURAHAN ? `Kelurahan: ${kk.area.KELURAHAN}` : "",
+        kk.area.KECAMATAN ? `Kecamatan: ${kk.area.KECAMATAN}` : "",
+        kk.area.KABUPATEN ? `Kabupaten: ${kk.area.KABUPATEN}` : "",
+        kk.area.PROVINSI ? `Provinsi: ${kk.area.PROVINSI}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | ");
+      if (areaLine) parts.push(areaLine);
+    }
+    parts.push("");
+    kk.members.forEach((m, idx) => {
+      parts.push(`-- Anggota ${idx + 1} --`);
+      parts.push(`NIK: ${m.NIK ?? "-"}`);
+      parts.push(`Nama: ${m.NAMA_LENGKAP ?? "-"}`);
+      parts.push(`TTL: ${m.TTL ?? "-"}`);
+      parts.push(`JK: ${m.JK ?? "-"}`);
+      parts.push(`SHK: ${m.SHK ?? "-"}`);
+      parts.push(`Status Kawin: ${m.STATUS_PERKAWINAN ?? "-"}`);
+      parts.push(`Agama: ${m.AGAMA ?? "-"}`);
+      parts.push(`Gol Darah: ${m.GOLONGAN_DARAH ?? "-"}`);
+      parts.push(`Pendidikan: ${m.PENDIDIKAN_TERAKHIR ?? "-"}`);
+      parts.push(`Pekerjaan: ${m.PEKERJAAN ?? "-"}`);
+      parts.push("");
+    });
+    return parts.join("\n");
+  }
+
+  if (showGeneric) {
+    const parts: string[] = [];
+    parts.push("=== DATA NOMOR / WALLET / DATABASE ===");
+    if (generic.queryPhone) parts.push(`Phone: ${generic.queryPhone}`);
+    if (generic.contact) parts.push(`Contact: ${generic.contact}`);
+    if (generic.regData) parts.push(`Reg Data: ${generic.regData}`);
+    if (generic.wallets && Object.keys(generic.wallets).length) {
+      parts.push("");
+      parts.push("[Wallet Information]");
+      Object.keys(generic.wallets).forEach((k) => {
+        parts.push(`${k}: ${generic.wallets?.[k] ?? "-"}`);
+      });
+    }
+    if (generic.people?.length) {
+      parts.push("");
+      parts.push("[Database Information]");
+      generic.people.forEach((p, i) => {
+        parts.push(`-- Record ${i + 1} --`);
+        parts.push(`Name: ${p.Name ?? "-"}`);
+        parts.push(`Email: ${p.Email ?? "-"}`);
+        parts.push(`Phone: ${p.Phone ?? "-"}`);
+        parts.push(`DOB: ${p.DOB ?? "-"}`);
+        parts.push("");
+      });
+    }
+    return parts.join("\n");
+  }
+
+  if (showNIK && nikRecords.length) {
+    const parts: string[] = [];
+    parts.push("=== DATA NIK ===");
+    nikRecords.forEach((r, i) => {
+      parts.push(`-- Record ${i + 1} --`);
+      parts.push(stringifyRecord(r));
+      parts.push("");
+    });
+    return parts.join("\n");
+  }
+
+  // fallback: raw text (tanpa code fence)
+  return stripCodeFence(raw || "");
+}
+
+// ---------------------------
+// Single message bubble (safe hooks)
+// ---------------------------
+function MessageRow({
+  msg,
+  isMe,
+  scrollSmart,
+}: {
+  msg: BotResult;
+  isMe: boolean;
+  scrollSmart: () => void;
+}) {
+  const captureRef = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+
+  const kk = useMemo(() => parseKK(msg.result_text || ""), [msg.result_text]);
+  const generic = useMemo(
+    () => parseGeneric(msg.result_text || ""),
+    [msg.result_text]
+  );
+  const nikRecords = useMemo(
+    () => parsePopulationResult(msg.result_text || ""),
+    [msg.result_text]
+  );
+
+  // --- boolean-only helpers (FIX tipe) ---
+  const hasKK = !!(kk.found && kk.members.length > 0);
+  const hasGenericContent =
+    (generic.people?.length ?? 0) > 0 ||
+    !!generic.wallets ||
+    !!generic.queryPhone ||
+    !!generic.contact ||
+    !!generic.regData;
+  const hasGeneric = !!(generic.found && hasGenericContent);
+  const hasNIK = !!(nikRecords.length > 0);
+
+  const showKK = hasKK;
+  const showGeneric = !showKK && hasGeneric;
+  const showNIK = !showKK && !showGeneric && hasNIK;
+
+  async function copyAllLikeScreenshot() {
+    const text = buildExportText({
+      showKK,
+      kk,
+      showGeneric,
+      generic,
+      showNIK,
+      nikRecords,
+      raw: msg.result_text || "",
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      console.error("Copy failed:", e);
+    }
+  }
+
+  return (
+    <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+      <div
+        className={`relative p-3 rounded-xl max-w-[75%] text-sm leading-snug shadow-md
+          ${
+            isMe
+              ? "bg-chatbot text-white rounded-br-none"
+              : "bg-chatbot text-white rounded-bl-none"
+          }`}
+        style={{ wordBreak: "break-word" }}
+      >
+        {/* Toolbar mini → copy text (bukan screenshot) */}
+        <div className="absolute -top-3 right-2 flex gap-1">
+          <button
+            className="text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              copyAllLikeScreenshot();
+            }}
+            title="Copy all text"
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+
+        {/* ==== AREA (visual saja) ==== */}
+        <div ref={captureRef}>
+          {showKK ? (
+            <KKFamilyTable nkk={kk.nkk} area={kk.area} members={kk.members} />
+          ) : showGeneric ? (
+            <div className="space-y-2">
+              {generic.queryPhone ? (
+                <div className="text-xs text-white/90">
+                  <span className="text-white/70">Phone</span>:{" "}
+                  <span className="font-medium">{generic.queryPhone}</span>
+                  <CopyBadge value={generic.queryPhone} />
+                </div>
+              ) : null}
+              {generic.contact ? (
+                <div className="text-xs text-white/90">
+                  <span className="text-white/70">Contact</span>:{" "}
+                  {generic.contact}
+                </div>
+              ) : null}
+              {generic.regData ? (
+                <div className="text-xs text-white/90">
+                  <span className="text-white/70">Reg Data</span>:{" "}
+                  {generic.regData}
+                </div>
+              ) : null}
+              {generic.wallets ? (
+                <WalletTable wallets={generic.wallets} />
+              ) : null}
+              {generic.people.length > 0 ? (
+                <div className="mt-2">
+                  {generic.people.map((p, idx) => (
+                    <PersonRecordTable key={idx} person={p} index={idx} />
+                  ))}
+                </div>
+              ) : null}
+              {/* expedition/recidivist/vehicle hidden */}
+            </div>
+          ) : showNIK ? (
+            <ParsedResult records={nikRecords} />
+          ) : (
+            <div className="whitespace-pre-wrap">{msg.result_text}</div>
+          )}
+
+          {msg.mime_type === "image/jpeg" && (
+            <img
+              src={`${process.env.NEXT_PUBLIC_BASE_URL}/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
+              alt="Preview"
+              className="max-w-full rounded-lg shadow-lg mt-2"
+              onLoad={scrollSmart}
+              onClick={(e) => e.stopPropagation()}
+            />
+          )}
+        </div>
+        {/* ==== END AREA ==== */}
+
+        <div
+          className={`text-[10px] ${
+            isMe ? "text-white" : "text-gray-300"
+          } mt-1 text-right select-none`}
+        >
+          {new Date(msg.created_at).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </div>
+
+        <div
+          className={`absolute -z-10 bottom-0 h-4 w-4 ${
+            isMe ? "right-2 bg-blue-600" : "left-2 bg-gray-100"
+          } rounded-full blur-[6px] opacity-30`}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------
+// List container
+// ---------------------------
 const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   const dispatch = useDispatch<AppDispatch>();
   const { result, error } = useSelector((state: RootState) => state.chat);
@@ -45,7 +941,6 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
 
   useEffect(() => {
     socket.emit("room:lobby:join", "");
-
     const handler = (msg: any) => {
       try {
         const parsed: BotResultSocket = JSON.parse(msg);
@@ -66,7 +961,6 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         console.error("Invalid JSON in bot_msg:", e);
       }
     };
-
     socket.on("bot_msg", handler);
     return () => {
       socket.off("bot_msg", handler);
@@ -87,11 +981,10 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   if (navbar === "settings") return <Settings />;
 
   return (
-    /* Full width & height container, no fixed width/height, no centering box */
     <div className="w-full h-full flex flex-col bg-white md:rounded-none">
       {error && <div className="text-center text-red-500">{error}</div>}
 
-      {/* TOP NAVBAR with selected chat info */}
+      {/* TOP NAVBAR */}
       <div className="sticky top-0 z-20 border-bottom-cyber bg-cyber backdrop-blur">
         {selected ? (
           <div className="flex items-center gap-4 p-4">
@@ -106,10 +999,10 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         )}
       </div>
 
-      {/* MESSAGE LIST: flex-1 scroll area */}
+      {/* MESSAGE LIST */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto p-5 bg-cyber  bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat"
+        className="flex-1 overflow-y-auto p-5 bg-cyber bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat"
       >
         <div className="min-h-full flex flex-col justify-center px-1 space-y-3">
           {[...messages]
@@ -121,57 +1014,19 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
             .sort((a, b) => (a.id as number) - (b.id as number))
             .map((msg, i) => {
               const isMe = msg.username === username;
-
               if (
-                msg.result_text.includes("Mengirim permintaan") &&
-                i != messages.length - 1
-              )
+                msg.result_text?.includes("Mengirim permintaan") &&
+                i !== messages.length - 1
+              ) {
                 return null;
-
+              }
               return (
-                <div
+                <MessageRow
                   key={msg.id}
-                  className={`flex ${isMe ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`relative p-3 rounded-xl max-w-[75%] text-sm leading-snug shadow-md
-                      ${
-                        isMe
-                          ? "bg-chatbot text-white rounded-br-none"
-                          : "bg-chatbot text-white rounded-bl-none"
-                      }`}
-                    style={{ wordBreak: "break-word" }}
-                  >
-                    <div className="whitespace-pre-wrap">{msg.result_text}</div>
-
-                    {msg.mime_type === "image/jpeg" && (
-                      <img
-                        src={`${process.env.NEXT_PUBLIC_BASE_URL}/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
-                        alt="Preview"
-                        className="max-w-full rounded-lg shadow-lg mt-2"
-                        onLoad={scrollSmart}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    )}
-
-                    <div
-                      className={`text-[10px] ${
-                        isMe ? "text-white" : "text-gray-400"
-                      } mt-1 text-right select-none`}
-                    >
-                      {new Date(msg.created_at).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-
-                    <div
-                      className={`absolute -z-10 bottom-0 h-4 w-4 ${
-                        isMe ? "right-2 bg-blue-600" : "left-2 bg-gray-100"
-                      } rounded-full blur-[6px] opacity-30`}
-                    />
-                  </div>
-                </div>
+                  msg={msg}
+                  isMe={isMe}
+                  scrollSmart={scrollSmart}
+                />
               );
             })}
         </div>
