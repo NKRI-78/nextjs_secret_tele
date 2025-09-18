@@ -189,7 +189,11 @@ const MessageList = ({
       setUploadedFile(null);
       setPreviewUrl(null);
 
-      onSubmitSuccess?.();
+      console.log("Send success:", payload);
+
+      if (payload?.status == 200) {
+        onSubmitSuccess?.();
+      }
     } catch (err) {
       console.error("Send failed:", err);
       // mark the optimistic bubble as failed and persist that too
@@ -216,7 +220,6 @@ const MessageList = ({
     <div className="w-full h-full flex flex-col bg-white md:rounded-none">
       {error && <div className="text-center text-red-500">{error}</div>}
 
-      {/* TOP NAVBAR */}
       <div className="sticky top-0 z-20 border-bottom-cyber bg-white/80 backdrop-blur">
         {selected ? (
           <div className="flex items-center gap-4 p-4 bg-cyber">
@@ -232,115 +235,43 @@ const MessageList = ({
         )}
       </div>
 
-      {/* MAIN CHAT AREA */}
       <div className="flex flex-col flex-1">
-        {/* MESSAGE LIST */}
         <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
-          {messages.length === 0 ? (
-            <div className="min-h-full flex flex-col items-center justify-center px-1 space-y-6 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
-              <h1 className="text-2xl font-semibold text-white text-center">
-                {selected?.name}
-                <br />
-                <h3 className="text-sm font-normal text-gray-200">
-                  {selected?.name === "Kartu Keluarga"
-                    ? "Masukkan nomor kartu keluarga kamu dengan benar"
-                    : selected?.name === "NIK"
-                    ? "Isi NIK sesuai KTP agar datamu valid"
-                    : selected?.name === "Profiling Number"
-                    ? "Masukkan nomor telepon kamu dengan benar"
-                    : "Isi data dengan benar agar proses berjalan lancar"}
-                </h3>
-              </h1>
+          <div className="min-h-full flex flex-col items-center justify-center px-1 space-y-6 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
+            <h1 className="text-2xl font-semibold text-white text-center">
+              {selected?.name}
+              <br />
+              <h3 className="text-sm font-normal text-gray-200">
+                {selected?.name === "Kartu Keluarga"
+                  ? "Masukkan nomor kartu keluarga yang ingin anda cari"
+                  : selected?.name === "N.I.K"
+                  ? "Masukkan nomor induk kependudukan yang ingin anda cari"
+                  : selected?.name === "Registrasi Nomor Telepon"
+                  ? "Masukkan nomor telepon yang ingin anda cari"
+                  : "Isi data dengan benar agar proses berjalan lancar"}
+              </h3>
+            </h1>
 
-              {/* Composer di tengah */}
-              <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={input}
-                  onChange={(e) => {
-                    const numeric = e.target.value.replace(/\D/g, ""); // hapus semua non-digit
-                    setInput(numeric); // pakai yang sudah difilter
-                    try {
-                      localStorage.setItem(keyDraft(chatKey), numeric);
-                    } catch (err) {
-                      console.warn("Failed to persist draft:", err);
-                    }
-                  }}
-                  onKeyDown={(e) =>
-                    !sendingMessage && e.key === "Enter" && handleSubmit()
-                  }
-                  disabled={sendingMessage || !selected}
-                  className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder={
-                    !selected
-                      ? "Select a chat"
-                      : sendingMessage
-                      ? "Sending..."
-                      : `${selected.placeholder}`
-                  }
-                />
-                <button
-                  onClick={handleSubmit}
-                  disabled={sendingMessage || !selected}
-                  className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
-                >
-                  {sendingMessage ? (
-                    <svg
-                      className="h-5 w-5 animate-spin"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                      />
-                    </svg>
-                  ) : (
-                    "➤"
-                  )}
-                </button>
-              </div>
-            </div>
-          ) : (
-            // === MODE ADA PESAN ===
-            <div className="min-h-full flex flex-col justify-end space-y-3 pb-32 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
-              {/* ... render messages here ... */}
-            </div>
-          )}
-        </div>
-
-        {/* COMPOSER di bawah hanya tampil kalau ada pesan
-        {messages.length > 0 && (
-          <div className="bg-cyber/80 backdrop-blur-md p-4">
+            {/* Composer di tengah */}
             <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
               <input
                 type="tel"
                 inputMode="numeric"
                 value={input}
                 onChange={(e) => {
-                  const numeric = e.target.value.replace(/\D/g, ""); // hapus semua non-digit
+                  const numeric = e.target.value.replace(/\D/g, "");
                   setInput(numeric);
-                   try {
-                      localStorage.setItem(keyDraft(chatKey), numeric);
-                    } catch (err) {
-                      console.warn("Failed to persist draft:", err);
-                    }
+                  // try {
+                  //   localStorage.setItem(keyDraft(chatKey), numeric);
+                  // } catch (err) {
+                  //   console.warn("Failed to persist draft:", err);
+                  // }
                 }}
                 onKeyDown={(e) =>
                   !sendingMessage && e.key === "Enter" && handleSubmit()
                 }
                 disabled={sendingMessage || !selected}
-                className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder={
                   !selected
                     ? "Select a chat"
@@ -352,7 +283,7 @@ const MessageList = ({
               <button
                 onClick={handleSubmit}
                 disabled={sendingMessage || !selected}
-                className="h-10 w-10 flex items-center justify-center rounded-full bg-submit-chatbot text-white disabled:opacity-50 hover:scale-105 transition"
+                className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
               >
                 {sendingMessage ? (
                   <svg
@@ -380,7 +311,7 @@ const MessageList = ({
               </button>
             </div>
           </div>
-        )} */}
+        </div>
       </div>
     </div>
   );

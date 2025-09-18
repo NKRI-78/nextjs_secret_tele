@@ -2,6 +2,7 @@ import Swal from "sweetalert2";
 import api from "./axios";
 import axios from "axios";
 import { CompanyDoc } from "../interfaces/botsecret/company";
+import Cookies from "js-cookie";
 
 export const ChatMessageList = async () => {
   try {
@@ -21,7 +22,12 @@ export const ChatMessageList = async () => {
 
 export const ChatMessageListResult = async () => {
   try {
-    const response = await api.get("/get_search_results");
+    const token = Cookies.get("token");
+    const response = await api.get("/get_search_results/v2", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     const data = response?.data?.results;
     return data;
   } catch (e: any) {
@@ -58,16 +64,19 @@ export const ChatMessageListCompany = async (formData: FormData) => {
 
 export const SendMessage = async (formData: FormData) => {
   try {
-    await api.post(`/send`, formData, {
+    const token = Cookies.get("token");
+    const rsponse = await api.post(`/send`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
+        Authorization: `Bearer ${token}`,
       },
     });
+    return rsponse;
   } catch (e: any) {
     Swal.fire({
       icon: "error",
       title: "Error",
-      text: e?.response?.data?.message || e.message,
+      text: (e?.response?.data?.detail || e.message).replace("401:", ""),
       timer: 2000,
       showConfirmButton: false,
     });

@@ -26,9 +26,9 @@ export const Login = async (val: string, password: string) => {
 export const LoginBotSecret = async (username: string, password: string) => {
   try {
     const response = await axios.post(
-      `https://socketio-capbridge.langitdigital78.com/login-bot-secret`,
+      `https://api-sabi.langitdigital78.com/api/v1/auth`,
       {
-        username: username,
+        email: username,
         password: password,
       }
     );

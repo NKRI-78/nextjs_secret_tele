@@ -51,23 +51,23 @@ const INITIAL_CHATS: ChatItem[] = [
   },
   {
     id: "4",
-    name: "Profiling Number",
+    name: "Registrasi Nomor Telepon",
     icon: "/images/profiling.png",
     lastMessage: "",
     time: "00:00",
     command: "/profiling",
     type: "profiling",
-    placeholder: "Profiling Number",
+    placeholder: "Registrasi Nomor Telepon",
   },
   {
     id: "5",
-    name: "Data Perusahaan",
+    name: "Nama Perusahaan",
     icon: "/images/company.png",
     lastMessage: "",
     time: "00:00",
     command: "-",
     type: "perusahaan",
-    placeholder: "Data Perusahaan",
+    placeholder: "Nama Perusahaan",
   },
 ];
 
