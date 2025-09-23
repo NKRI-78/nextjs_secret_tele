@@ -88,7 +88,7 @@ function parsePopulationResult(rawText: string): ParsedRecord[] {
       const m = line.match(/^([A-Z .]+?)\s*:\s*(.*)$/i);
       if (m) {
         let key = m[1].trim().toUpperCase();
-        let val = (m[2] || "").trim();
+        const val = (m[2] || "").trim();
 
         key = key
           .replace(/\s+/g, " ")
@@ -437,7 +437,9 @@ function CopyBadge({
           await navigator.clipboard.writeText(value);
           setDone(true);
           setTimeout(() => setDone(false), 1200);
-        } catch {}
+        } catch {
+          console.log("Error");
+        }
       }}
       title={label}
     >
