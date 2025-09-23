@@ -88,7 +88,7 @@ function parsePopulationResult(rawText: string): ParsedRecord[] {
       const m = line.match(/^([A-Z .]+?)\s*:\s*(.*)$/i);
       if (m) {
         let key = m[1].trim().toUpperCase();
-        let val = (m[2] || "").trim();
+        const val = (m[2] || "").trim();
 
         key = key
           .replace(/\s+/g, " ")
@@ -437,7 +437,9 @@ function CopyBadge({
           await navigator.clipboard.writeText(value);
           setDone(true);
           setTimeout(() => setDone(false), 1200);
-        } catch {}
+        } catch {
+          console.log("Error");
+        }
       }}
       title={label}
     >
@@ -476,13 +478,24 @@ function ResultRecordTable({
                 <td className="w-[34%] px-3 py-2 text-white/80 align-top">
                   {label}
                 </td>
-                <td className="px-3 py-2 text-white break-words">
-                  <div className="flex items-center">
+                <td
+                  className={
+                    "px-3 py-2 text-white " +
+                    (isNIK ? "whitespace-nowrap" : "break-words")
+                  }
+                >
+                  <div className="flex items-center gap-2 min-w-fit">
                     <span
-                      className={isNIK ? "font-semibold tracking-wide" : ""}
+                      className={
+                        (isNIK
+                          ? "font-mono tabular-nums select-all hyphens-none "
+                          : "") + (isNIK ? "font-semibold" : "")
+                      }
+                      title={val || "-"}
                     >
                       {val || "-"}
                     </span>
+                    {/* Copy hanya untuk NIK */}
                     {isNIK && val ? <CopyBadge value={val} /> : null}
                   </div>
                 </td>
@@ -578,6 +591,7 @@ function KKFamilyTable({
           {nkk ? (
             <div className="text-[11px] mt-1">
               NKK: <span className="font-medium">{nkk}</span>{" "}
+              {/* Copy hanya untuk NKK */}
               <CopyBadge value={nkk} />
             </div>
           ) : null}
@@ -592,7 +606,7 @@ function KKFamilyTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs table-auto">
           <thead className="bg-white/10">
             <tr>
               <th className="px-3 py-2 text-left">NIK</th>
@@ -610,9 +624,15 @@ function KKFamilyTable({
           <tbody>
             {members.map((m, i) => (
               <tr key={i} className="odd:bg-white/0 even:bg-white/5">
-                <td className="px-3 py-2">
-                  <div className="flex items-center">
-                    <span className="font-medium">{m.NIK || "-"}</span>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <div className="flex items-center gap-2 min-w-fit">
+                    <span
+                      className="font-medium font-mono tabular-nums select-all hyphens-none"
+                      title={m.NIK || "-"}
+                    >
+                      {m.NIK || "-"}
+                    </span>
+                    {/* Copy hanya untuk NIK anggota */}
                     {m.NIK ? <CopyBadge value={m.NIK} /> : null}
                   </div>
                 </td>
@@ -769,7 +789,7 @@ function MessageRow({
     [msg.result_text]
   );
 
-  // --- boolean-only helpers (FIX tipe) ---
+  // --- boolean-only helpers ---
   const hasKK = !!(kk.found && kk.members.length > 0);
   const hasGenericContent =
     (generic.people?.length ?? 0) > 0 ||
@@ -814,19 +834,21 @@ function MessageRow({
           }`}
         style={{ wordBreak: "break-word" }}
       >
-        {/* Toolbar mini → copy text (bukan screenshot) */}
-        <div className="absolute -top-3 right-2 flex gap-1">
-          <button
-            className="text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              copyAllLikeScreenshot();
-            }}
-            title="Copy all text"
-          >
-            {copied ? "Copied" : "Copy"}
-          </button>
-        </div>
+        {/* Toolbar: tombol Copy hanya untuk KK & NIK */}
+        {(showKK || showNIK) && (
+          <div className="absolute -top-3 right-2 flex gap-1">
+            <button
+              className="text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
+              onClick={(e) => {
+                e.stopPropagation();
+                copyAllLikeScreenshot();
+              }}
+              title="Copy all text"
+            >
+              {copied ? "Copied" : "Copy"}
+            </button>
+          </div>
+        )}
 
         {/* ==== AREA (visual saja) ==== */}
         <div ref={captureRef}>
@@ -838,7 +860,7 @@ function MessageRow({
                 <div className="text-xs text-white/90">
                   <span className="text-white/70">Phone</span>:{" "}
                   <span className="font-medium">{generic.queryPhone}</span>
-                  <CopyBadge value={generic.queryPhone} />
+                  {/* no copy on generic */}
                 </div>
               ) : null}
               {generic.contact ? (
