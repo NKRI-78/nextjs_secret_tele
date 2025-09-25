@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
+import axios from "axios";
 
 const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -42,6 +43,28 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
       reader.readAsDataURL(file);
     } else {
       setPreviewUrl(null);
+    }
+  };
+
+  const openFile = async (url: string) => {
+    try {
+      const res = await axios.post(
+        "https://api-media.langitdigital78.com/api/v1/get/signed-url",
+        { url },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MjAyNSwibmFtZSI6IkhlbGxvIFBhbmRhIiwiaWF0IjoxNzU4Nzk2NDMxfQ.thKwvRvLi5j8IMj_EbqHbCuwpRj6Y1XQQMtvFoIADzc`,
+          },
+        }
+      );
+
+      var urlRes = res.data.url;
+
+      window.open(urlRes, "_blank");
+    } catch (err) {
+      console.error("Gagal tracking link:", err);
+      window.open(url, "_blank");
     }
   };
 
@@ -97,7 +120,7 @@ const MessageListCompany = ({ selected }: { selected: ChatItem | null }) => {
                   return (
                     <li key={c.id}>
                       <a
-                        href={c.url}
+                        onClick={() => openFile(c.url)}
                         target="_blank"
                         rel="noreferrer"
                         className="block p-2 rounded hover:bg-cyber"
