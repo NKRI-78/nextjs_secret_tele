@@ -606,7 +606,7 @@ function KKFamilyTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-xs table-auto">
+        <table className="w-full min-w-[900px] text-xs table-auto">
           <thead className="bg-white/10">
             <tr>
               <th className="px-3 py-2 text-left">NIK</th>
@@ -826,7 +826,7 @@ function MessageRow({
   return (
     <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
       <div
-        className={`relative p-3 rounded-xl max-w-[75%] text-sm leading-snug shadow-md
+        className={`relative p-3 rounded-xl max-w-[95%] text-sm leading-snug shadow-md
           ${
             isMe
               ? "bg-chatbot text-white rounded-br-none"
@@ -1026,7 +1026,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         ref={listRef}
         className="flex-1 overflow-y-auto p-5 bg-cyber bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat"
       >
-        <div className="min-h-full flex flex-col justify-center px-1 space-y-3">
+        <div className="min-h-[100dvh] flex flex-col justify-center px-1 space-y-3">
           {[...messages]
             .filter(
               (msg) =>

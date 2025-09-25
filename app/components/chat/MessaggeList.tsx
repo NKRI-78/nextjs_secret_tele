@@ -237,7 +237,7 @@ const MessageList = ({
 
       <div className="flex flex-col flex-1">
         <div ref={listRef} className="flex-1 overflow-y-auto p-5 bg-cyber">
-          <div className="min-h-full flex flex-col items-center justify-center px-1 space-y-6 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
+          <div className="min-h-[100dvh] flex flex-col items-center justify-center px-1 space-y-6 bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat">
             <h1 className="text-2xl font-semibold text-white text-center">
               {selected?.name}
               <br />

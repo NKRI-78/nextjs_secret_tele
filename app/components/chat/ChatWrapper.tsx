@@ -95,7 +95,7 @@ export default function ChatWrapper() {
       {{
         left: (
           <div
-            className="w-full bg-cyber bg-white min-h-[280px] md:min-h-0 md:h-[100dvh] overflow-y-auto"
+            className="w-full bg-cyber h-[100dvh] overflow-y-auto"
             aria-label="Chat list"
           >
             <Chat
