@@ -11,6 +11,17 @@ import { BotResult, BotResultSocket } from "@/app/interfaces/botsecret/result";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
 
+// ===========================
+// Helper: hide intro messages
+// ===========================
+function isIntroText(text?: string | null): boolean {
+  if (!text) return false;
+  const s = text.trim();
+  if (/^\/start\b/i.test(s)) return true;
+  if (/akses\s+track\s+bts/i.test(s)) return true;
+  return false;
+}
+
 // ---------------------------
 // Parsing helpers (NIK-style)
 // ---------------------------
@@ -258,8 +269,8 @@ type KKMember = {
   NIK?: string;
   NAMA_LENGKAP?: string;
   TTL?: string;
-  JK?: string; // JENIS KELAMIN
-  SHK?: string; // STATUS HUBUNGAN KELUARGA
+  JK?: string;
+  SHK?: string;
   STATUS_PERKAWINAN?: string;
   AGAMA?: string;
   GOLONGAN_DARAH?: string;
@@ -495,7 +506,6 @@ function ResultRecordTable({
                     >
                       {val || "-"}
                     </span>
-                    {/* Copy hanya untuk NIK */}
                     {isNIK && val ? <CopyBadge value={val} /> : null}
                   </div>
                 </td>
@@ -591,7 +601,6 @@ function KKFamilyTable({
           {nkk ? (
             <div className="text-[11px] mt-1">
               NKK: <span className="font-medium">{nkk}</span>{" "}
-              {/* Copy hanya untuk NKK */}
               <CopyBadge value={nkk} />
             </div>
           ) : null}
@@ -632,7 +641,6 @@ function KKFamilyTable({
                     >
                       {m.NIK || "-"}
                     </span>
-                    {/* Copy hanya untuk NIK anggota */}
                     {m.NIK ? <CopyBadge value={m.NIK} /> : null}
                   </div>
                 </td>
@@ -760,7 +768,6 @@ function buildExportText({
     return parts.join("\n");
   }
 
-  // fallback: raw text (tanpa code fence)
   return stripCodeFence(raw || "");
 }
 
@@ -789,7 +796,6 @@ function MessageRow({
     [msg.result_text]
   );
 
-  // --- boolean-only helpers ---
   const hasKK = !!(kk.found && kk.members.length > 0);
   const hasGenericContent =
     (generic.people?.length ?? 0) > 0 ||
@@ -834,7 +840,6 @@ function MessageRow({
           }`}
         style={{ wordBreak: "break-word" }}
       >
-        {/* Toolbar: tombol Copy hanya untuk KK & NIK */}
         {(showKK || showNIK) && (
           <div className="absolute -top-3 right-2 flex gap-1">
             <button
@@ -850,7 +855,6 @@ function MessageRow({
           </div>
         )}
 
-        {/* ==== AREA (visual saja) ==== */}
         <div ref={captureRef}>
           {showKK ? (
             <KKFamilyTable nkk={kk.nkk} area={kk.area} members={kk.members} />
@@ -860,7 +864,6 @@ function MessageRow({
                 <div className="text-xs text-white/90">
                   <span className="text-white/70">Phone</span>:{" "}
                   <span className="font-medium">{generic.queryPhone}</span>
-                  {/* no copy on generic */}
                 </div>
               ) : null}
               {generic.contact ? (
@@ -885,7 +888,6 @@ function MessageRow({
                   ))}
                 </div>
               ) : null}
-              {/* expedition/recidivist/vehicle hidden */}
             </div>
           ) : showNIK ? (
             <ParsedResult records={nikRecords} />
@@ -903,7 +905,6 @@ function MessageRow({
             />
           )}
         </div>
-        {/* ==== END AREA ==== */}
 
         <div
           className={`text-[10px] ${
@@ -943,29 +944,34 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
     dispatch(chatMessageListResultAsync());
   }, [dispatch]);
 
+  // filter out intro messages from initial load
   useEffect(() => {
     if (result) {
-      const incoming: BotResult[] = result.map((msg) => ({
-        id: msg.id,
-        chat_id: msg.chat_id,
-        file_url: msg.file_url,
-        message_id: msg.message_id,
-        mime_type: msg.mime_type,
-        result_from: msg.result_from,
-        result_text: msg.result_text,
-        username: msg.username,
-        created_at: msg.created_at,
-        updated_at: msg.updated_at,
-      }));
+      const incoming: BotResult[] = result
+        .map((msg) => ({
+          id: msg.id,
+          chat_id: msg.chat_id,
+          file_url: msg.file_url,
+          message_id: msg.message_id,
+          mime_type: msg.mime_type,
+          result_from: msg.result_from,
+          result_text: msg.result_text,
+          username: msg.username,
+          created_at: msg.created_at,
+          updated_at: msg.updated_at,
+        }))
+        .filter((m) => !isIntroText(m.result_text));
       setMessages(incoming);
     }
   }, [result]);
 
+  // filter out intro messages from socket stream
   useEffect(() => {
     socket.emit("room:lobby:join", "");
     const handler = (msg: any) => {
       try {
         const parsed: BotResultSocket = JSON.parse(msg);
+        if (isIntroText(parsed.text)) return; // skip
         const dataMsg: BotResult = {
           id: parsed.id,
           chat_id: parsed.chat_id,
@@ -1030,8 +1036,9 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
           {[...messages]
             .filter(
               (msg) =>
-                (msg.result_text && msg.result_text.trim() !== "") ||
-                msg.mime_type === "image/jpeg"
+                !isIntroText(msg.result_text) && // extra guard at render
+                ((msg.result_text && msg.result_text.trim() !== "") ||
+                  msg.mime_type === "image/jpeg")
             )
             .sort((a, b) => (a.id as number) - (b.id as number))
             .map((msg, i) => {
