@@ -308,7 +308,6 @@ type KKParsed = {
 function normalizeKeyKK(k: string): keyof KKMember | "OTHER" {
   const t = k.trim().toUpperCase();
 
-  // standar + alias nama
   if (t === "NIK") return "NIK";
   if (t === "NKK") return "NKK";
   if (t === "NAMA LENGKAP" || t === "NAMA") return "NAMA_LENGKAP";
@@ -322,14 +321,12 @@ function normalizeKeyKK(k: string): keyof KKMember | "OTHER" {
     return "PENDIDIKAN_TERAKHIR";
   if (t === "PEKERJAAN") return "PEKERJAAN";
 
-  // area + alias singkat
   if (t === "ALAMAT") return "ALAMAT";
   if (t === "PROVINSI" || t === "PROP") return "PROVINSI";
   if (t === "KABUPATEN" || t === "KAB") return "KABUPATEN";
   if (t === "KECAMATAN" || t === "KEC") return "KECAMATAN";
   if (t === "KELURAHAN" || t === "KEL") return "KELURAHAN";
 
-  // orang tua
   if (t === "NIK IBU") return "NIK_IBU";
   if (t === "NAMA IBU") return "NAMA_IBU";
   if (t === "NIK AYAH") return "NIK_AYAH";
@@ -347,7 +344,6 @@ function parseKK(rawText: string): KKParsed {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  // format lama (dengan header) ATAU format baru (tanpa header, punya >=2 blok NIK:)
   const hasHeaderOld =
     lines.some((l) => /^Detail from Family Number Data/i.test(l)) ||
     lines.some(
@@ -368,11 +364,9 @@ function parseKK(rawText: string): KKParsed {
   const hasKKHeader = hasHeaderOld || hasKKLikeBlocks;
   if (!hasKKHeader) return out;
 
-  // jika baris pertama berbentuk "^\d{16}:\s*$", anggap itu NKK
   const firstLine = lines[0] || "";
   const nkkHeader = firstLine.match(/^(\d{16})\s*:\s*$/)?.[1];
 
-  // PEMBENTUKAN BLOK ANGGOTA
   const memberBlocks: string[][] = [];
   let curr: string[] = [];
   for (const line of lines) {
@@ -412,7 +406,6 @@ function parseKK(rawText: string): KKParsed {
 
         if (key === "NKK" && value) allNKK.push(value);
 
-        // voting area
         if (
           (key === "ALAMAT" ||
             key === "PROVINSI" ||
@@ -438,7 +431,6 @@ function parseKK(rawText: string): KKParsed {
     members.push(m);
   }
 
-  // cari NKK kalau ada; kalau tidak ada, pakai header 16-digit
   let nkk: string | undefined;
   if (allNKK.length) {
     const freq = new Map<string, number>();
@@ -1023,7 +1015,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
     dispatch(chatMessageListResultAsync());
   }, [dispatch]);
 
-  // filter out intro messages from initial load
+  // initial load -> sort once by created_at (ASC) and filter intro
   useEffect(() => {
     if (result) {
       const incoming: BotResult[] = result
@@ -1040,30 +1032,41 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
           updated_at: msg.updated_at,
         }))
         .filter((m) => !isIntroText(m.result_text));
+
+      incoming.sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      ); // keep chronological
+
       setMessages(incoming);
     }
   }, [result]);
 
-  // filter out intro messages from socket stream
+  // socket stream -> append at bottom, filter intro, dedupe by id
   useEffect(() => {
     socket.emit("room:lobby:join", "");
     const handler = (msg: any) => {
       try {
         const parsed: BotResultSocket = JSON.parse(msg);
-        if (isIntroText(parsed.text)) return; // skip
+        if (isIntroText(parsed.result_text)) return;
+
         const dataMsg: BotResult = {
           id: parsed.id,
           chat_id: parsed.chat_id,
-          created_at: parsed.date,
-          file_url: "",
+          file_url: parsed.file_url,
           message_id: 0,
           mime_type: parsed.mime_type,
-          result_from: "",
-          result_text: parsed.text,
-          updated_at: "",
+          result_from: parsed.result_from,
+          result_text: parsed.result_text,
           username: parsed.username,
+          created_at: parsed.created_at,
+          updated_at: parsed.updated_at,
         };
-        setMessages((prev) => [...prev, dataMsg]);
+
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === dataMsg.id)) return prev; // dedupe
+          return [...prev, dataMsg]; // append to bottom
+        });
       } catch (e) {
         console.error("Invalid JSON in bot_msg:", e);
       }
@@ -1078,7 +1081,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
     const el = listRef.current;
     if (!el) return;
     const hasOverflow = el.scrollHeight > el.clientHeight + 4;
-    if (hasOverflow) el.scrollTop = el.scrollHeight;
+    if (hasOverflow) el.scrollTop = el.scrollHeight; // stick to bottom
   }, []);
 
   useEffect(() => {
@@ -1111,15 +1114,15 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         ref={listRef}
         className="flex-1 overflow-y-auto p-5 bg-cyber bg-[url('/images/bg-chat.png')] bg-cover bg-center bg-no-repeat"
       >
-        <div className="min-h-[100dvh] flex flex-col justify-center px-1 space-y-3">
-          {[...messages]
+        {/* remove justify-center so messages start at top and grow downward */}
+        <div className="min-h-[100dvh] flex flex-col px-1 space-y-3">
+          {messages
             .filter(
               (msg) =>
-                !isIntroText(msg.result_text) && // extra guard at render
-                ((msg.result_text && msg.result_text.trim() !== "") ||
-                  msg.mime_type === "image/jpeg")
+                (msg.result_text && msg.result_text.trim() !== "") ||
+                msg.mime_type === "image/jpeg"
             )
-            .sort((a, b) => (a.id as number) - (b.id as number))
+            /* IMPORTANT: no sort here—use state order */
             .map((msg, i) => {
               const isMe = msg.username === username;
               if (

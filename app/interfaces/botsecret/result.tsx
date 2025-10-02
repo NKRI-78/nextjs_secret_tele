@@ -15,15 +15,16 @@ export interface BotResult {
 
 export interface BotResultSocket {
   id: number;
-  username: string;
-  chat_id: number;
-  sender_id: number;
-  date: string;
-  file_name: string | null;
+  result_text: string;
+  file_url: string;
   mime_type: string | null;
-  file_size: number | null;
-  text: string;
-  buttons: unknown[];
+  username: string;
+  message_id: number;
+  chat_id: number;
+  result_from: string;
+  search_user_id?: string | number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface BotApiResponse {
