@@ -6,7 +6,7 @@ import Cookies from "js-cookie";
 
 export const ChatMessageList = async () => {
   try {
-    const response = await api.get("/messages/@Wolf_botbot?limit=10");
+    const response = await api.get("/messages/@AnakAsuhanRembolan_iBot?limit=10");
     const data = response?.data?.messages;
     return data;
   } catch (e: any) {

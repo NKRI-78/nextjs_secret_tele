@@ -55,7 +55,7 @@ const INITIAL_CHATS: ChatItem[] = [
     icon: "/images/profiling.png",
     lastMessage: "",
     time: "00:00",
-    command: "/profiling",
+    command: "/reg",
     type: "profiling",
     placeholder: "Registrasi Nomor Telepon",
   },

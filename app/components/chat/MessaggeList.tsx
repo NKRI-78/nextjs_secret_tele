@@ -166,7 +166,7 @@ const MessageList = ({
     setSendingMessage(true);
     try {
       const formData = new FormData();
-      formData.append("chat", "@Wolf_botbot");
+      formData.append("chat", "@AnakAsuhanRembolan_iBot");
       if (uploadedFile) {
         formData.append("file", uploadedFile);
         formData.append("message", "");

@@ -270,17 +270,24 @@ type KKMember = {
   NAMA_LENGKAP?: string;
   TTL?: string;
   JK?: string;
-  SHK?: string;
+  SHK?: string; // Hubungan
   STATUS_PERKAWINAN?: string;
   AGAMA?: string;
   GOLONGAN_DARAH?: string;
   PENDIDIKAN_TERAKHIR?: string;
   PEKERJAAN?: string;
+  // Area
   ALAMAT?: string;
   PROVINSI?: string;
   KABUPATEN?: string;
   KECAMATAN?: string;
   KELURAHAN?: string;
+  // Orang tua (BARU)
+  NIK_IBU?: string;
+  NAMA_IBU?: string;
+  NIK_AYAH?: string;
+  NAMA_AYAH?: string;
+  // NKK (jika per-anggota ada)
   NKK?: string;
 };
 
@@ -297,27 +304,41 @@ type KKParsed = {
   members: KKMember[];
 };
 
+// === UPDATED: alias & normalizer diperluas ===
 function normalizeKeyKK(k: string): keyof KKMember | "OTHER" {
   const t = k.trim().toUpperCase();
+
+  // standar + alias nama
   if (t === "NIK") return "NIK";
   if (t === "NKK") return "NKK";
-  if (t === "NAMA LENGKAP") return "NAMA_LENGKAP";
+  if (t === "NAMA LENGKAP" || t === "NAMA") return "NAMA_LENGKAP";
   if (t === "TTL") return "TTL";
-  if (t === "JENIS KELAMIN") return "JK";
-  if (t === "STATUS HUBUNGAN KELUARGA") return "SHK";
-  if (t === "STATUS PERKAWINAN") return "STATUS_PERKAWINAN";
+  if (t === "JENIS KELAMIN" || t === "JK") return "JK";
+  if (t === "STATUS HUBUNGAN KELUARGA" || t === "HUBUNGAN") return "SHK";
+  if (t === "STATUS PERKAWINAN" || t === "STATUS") return "STATUS_PERKAWINAN";
   if (t === "AGAMA") return "AGAMA";
   if (t === "GOLONGAN DARAH") return "GOLONGAN_DARAH";
-  if (t === "PENDIDIKAN TERAKHIR") return "PENDIDIKAN_TERAKHIR";
+  if (t === "PENDIDIKAN TERAKHIR" || t === "PENDIDIKAN")
+    return "PENDIDIKAN_TERAKHIR";
   if (t === "PEKERJAAN") return "PEKERJAAN";
+
+  // area + alias singkat
   if (t === "ALAMAT") return "ALAMAT";
-  if (t === "PROVINSI") return "PROVINSI";
-  if (t === "KABUPATEN") return "KABUPATEN";
-  if (t === "KECAMATAN") return "KECAMATAN";
-  if (t === "KELURAHAN") return "KELURAHAN";
+  if (t === "PROVINSI" || t === "PROP") return "PROVINSI";
+  if (t === "KABUPATEN" || t === "KAB") return "KABUPATEN";
+  if (t === "KECAMATAN" || t === "KEC") return "KECAMATAN";
+  if (t === "KELURAHAN" || t === "KEL") return "KELURAHAN";
+
+  // orang tua
+  if (t === "NIK IBU") return "NIK_IBU";
+  if (t === "NAMA IBU") return "NAMA_IBU";
+  if (t === "NIK AYAH") return "NIK_AYAH";
+  if (t === "NAMA AYAH") return "NAMA_AYAH";
+
   return "OTHER";
 }
 
+// === UPDATED: deteksi format KK lebih fleksibel (tanpa header) + deteksi NKK header ===
 function parseKK(rawText: string): KKParsed {
   const out: KKParsed = { found: false, members: [] };
   const text = stripCodeFence(rawText);
@@ -326,11 +347,32 @@ function parseKK(rawText: string): KKParsed {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const hasKKHeader =
+  // format lama (dengan header) ATAU format baru (tanpa header, punya >=2 blok NIK:)
+  const hasHeaderOld =
     lines.some((l) => /^Detail from Family Number Data/i.test(l)) ||
-    lines.some((l) => /^NIK\s*:/i.test(l) && /^NKK\s*:/i.test(lines.join(" ")));
+    lines.some(
+      (l) => /^NIK\s*:\s*/i.test(l) && /^NKK\s*:\s*/i.test(lines.join(" "))
+    );
+
+  const nikCount = lines.filter((l) => /^NIK\s*:\s*/i.test(l)).length;
+  const hasKKLikeBlocks =
+    nikCount >= 2 &&
+    (lines.some((l) => /^HUBUNGAN\s*:/i.test(l)) ||
+      lines.some((l) => /^STATUS\s*:/i.test(l)) ||
+      lines.some((l) => /^STATUS PERKAWINAN\s*:/i.test(l)) ||
+      lines.some((l) => /^ALAMAT\s*:/i.test(l)) ||
+      lines.some((l) => /^PROP\s*:/i.test(l)) ||
+      lines.some((l) => /^KAB\s*:/i.test(l)) ||
+      lines.some((l) => /^KEC\s*:/i.test(l)));
+
+  const hasKKHeader = hasHeaderOld || hasKKLikeBlocks;
   if (!hasKKHeader) return out;
 
+  // jika baris pertama berbentuk "^\d{16}:\s*$", anggap itu NKK
+  const firstLine = lines[0] || "";
+  const nkkHeader = firstLine.match(/^(\d{16})\s*:\s*$/)?.[1];
+
+  // PEMBENTUKAN BLOK ANGGOTA
   const memberBlocks: string[][] = [];
   let curr: string[] = [];
   for (const line of lines) {
@@ -367,7 +409,10 @@ function parseKK(rawText: string): KKParsed {
 
       if (key !== "OTHER") {
         (m as any)[key] = value;
+
         if (key === "NKK" && value) allNKK.push(value);
+
+        // voting area
         if (
           (key === "ALAMAT" ||
             key === "PROVINSI" ||
@@ -393,17 +438,15 @@ function parseKK(rawText: string): KKParsed {
     members.push(m);
   }
 
+  // cari NKK kalau ada; kalau tidak ada, pakai header 16-digit
   let nkk: string | undefined;
   if (allNKK.length) {
     const freq = new Map<string, number>();
     for (const n of allNKK) freq.set(n, (freq.get(n) || 0) + 1);
-
-    const entries = Array.from(freq.entries());
-    if (entries.length) {
-      entries.sort((a, b) => b[1] - a[1]);
-      nkk = entries[0][0];
-    }
+    const entries = Array.from(freq.entries()).sort((a, b) => b[1] - a[1]);
+    nkk = entries[0]?.[0];
   }
+  if (!nkk && nkkHeader) nkk = nkkHeader;
 
   function topOf(map: Map<string, number>): string | undefined {
     const entries = Array.from(map.entries());
@@ -615,7 +658,7 @@ function KKFamilyTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[900px] text-xs table-auto">
+        <table className="w-full min-w-[1300px] text-xs table-auto">
           <thead className="bg-white/10">
             <tr>
               <th className="px-3 py-2 text-left">NIK</th>
@@ -628,6 +671,10 @@ function KKFamilyTable({
               <th className="px-3 py-2 text-left">Gol Darah</th>
               <th className="px-3 py-2 text-left">Pendidikan</th>
               <th className="px-3 py-2 text-left">Pekerjaan</th>
+              <th className="px-3 py-2 text-left">NIK Ibu</th>
+              <th className="px-3 py-2 text-left">Nama Ibu</th>
+              <th className="px-3 py-2 text-left">NIK Ayah</th>
+              <th className="px-3 py-2 text-left">Nama Ayah</th>
             </tr>
           </thead>
           <tbody>
@@ -653,6 +700,34 @@ function KKFamilyTable({
                 <td className="px-3 py-2">{m.GOLONGAN_DARAH || "-"}</td>
                 <td className="px-3 py-2">{m.PENDIDIKAN_TERAKHIR || "-"}</td>
                 <td className="px-3 py-2">{m.PEKERJAAN || "-"}</td>
+
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {m.NIK_IBU ? (
+                    <div className="flex items-center gap-2 min-w-fit">
+                      <span className="font-mono tabular-nums">
+                        {m.NIK_IBU}
+                      </span>
+                      <CopyBadge value={m.NIK_IBU} label="Copy" />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+                <td className="px-3 py-2">{m.NAMA_IBU || "-"}</td>
+
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {m.NIK_AYAH ? (
+                    <div className="flex items-center gap-2 min-w-fit">
+                      <span className="font-mono tabular-nums">
+                        {m.NIK_AYAH}
+                      </span>
+                      <CopyBadge value={m.NIK_AYAH} label="Copy" />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+                <td className="px-3 py-2">{m.NAMA_AYAH || "-"}</td>
               </tr>
             ))}
           </tbody>
@@ -724,6 +799,10 @@ function buildExportText({
       parts.push(`Gol Darah: ${m.GOLONGAN_DARAH ?? "-"}`);
       parts.push(`Pendidikan: ${m.PENDIDIKAN_TERAKHIR ?? "-"}`);
       parts.push(`Pekerjaan: ${m.PEKERJAAN ?? "-"}`);
+      parts.push(`NIK Ibu: ${m.NIK_IBU ?? "-"}`);
+      parts.push(`Nama Ibu: ${m.NAMA_IBU ?? "-"}`);
+      parts.push(`NIK Ayah: ${m.NIK_AYAH ?? "-"}`);
+      parts.push(`Nama Ayah: ${m.NAMA_AYAH ?? "-"}`);
       parts.push("");
     });
     return parts.join("\n");
