@@ -976,7 +976,7 @@ function MessageRow({
 
           {msg.mime_type === "image/jpeg" && (
             <img
-              src={`${process.env.NEXT_PUBLIC_BASE_URL}/download-file?chat_id=${msg.chat_id}&message_id=${msg.id}`}
+              src={`${msg.file_url}`}
               alt="Preview"
               className="max-w-full rounded-lg shadow-lg mt-2"
               onLoad={scrollSmart}
