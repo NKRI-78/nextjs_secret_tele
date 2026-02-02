@@ -6,7 +6,9 @@ import Cookies from "js-cookie";
 
 export const ChatMessageList = async () => {
   try {
-    const response = await api.get("/messages/@AnakAsuhanRembolan_iBot?limit=10");
+    const response = await api.get(
+      "/messages/@AnakAsuhanRembolan_iBot?limit=10",
+    );
     const data = response?.data?.messages;
     return data;
   } catch (e: any) {
@@ -65,7 +67,7 @@ export const ChatMessageListCompany = async (formData: FormData) => {
 export const SendMessage = async (formData: FormData) => {
   try {
     const token = Cookies.get("token");
-    const rsponse = await api.post(`/send`, formData, {
+    const rsponse = await api.post(`/send/v2`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
         Authorization: `Bearer ${token}`,
@@ -113,7 +115,7 @@ export const AskAnswer = async (data: any) => {
         media: data.media,
         prefix: data.prefix,
         type: data.type,
-      }
+      },
     );
   } catch (e: any) {
     Swal.fire({
@@ -129,7 +131,7 @@ export const AskAnswer = async (data: any) => {
 export const GetAnswer = async () => {
   try {
     const response = await axios.get(
-      `https://socketio-capbridge.langitdigital78.com/answer-bot-secret`
+      `https://socketio-capbridge.langitdigital78.com/answer-bot-secret`,
     );
     const data = response.data.data.answer;
     return data;

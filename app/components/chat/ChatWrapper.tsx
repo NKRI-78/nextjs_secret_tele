@@ -69,6 +69,16 @@ const INITIAL_CHATS: ChatItem[] = [
     type: "perusahaan",
     placeholder: "Nama Perusahaan",
   },
+  // {
+  //   id: "6",
+  //   name: "Face Recognition",
+  //   icon: "/images/fr.png",
+  //   lastMessage: "",
+  //   time: "00:00",
+  //   command: "-",
+  //   type: "profiling",
+  //   placeholder: "Face Recognition",
+  // },
 ];
 
 export default function ChatWrapper() {
@@ -77,7 +87,7 @@ export default function ChatWrapper() {
 
   const selected = useMemo(
     () => items.find((c) => c.id === selectedId) ?? null,
-    [items, selectedId]
+    [items, selectedId],
   );
 
   const goToResult = () => {

@@ -151,7 +151,7 @@ type GenericParsed = {
 
 function readSection(
   lines: string[],
-  startIdx: number
+  startIdx: number,
 ): { end: number; rows: string[] } {
   const rows: string[] = [];
   let i = startIdx;
@@ -347,7 +347,7 @@ function parseKK(rawText: string): KKParsed {
   const hasHeaderOld =
     lines.some((l) => /^Detail from Family Number Data/i.test(l)) ||
     lines.some(
-      (l) => /^NIK\s*:\s*/i.test(l) && /^NKK\s*:\s*/i.test(lines.join(" "))
+      (l) => /^NIK\s*:\s*/i.test(l) && /^NKK\s*:\s*/i.test(lines.join(" ")),
     );
 
   const nikCount = lines.filter((l) => /^NIK\s*:\s*/i.test(l)).length;
@@ -418,12 +418,12 @@ function parseKK(rawText: string): KKParsed {
             key === "ALAMAT"
               ? areaVotes.ALAMAT
               : key === "PROVINSI"
-              ? areaVotes.PROVINSI
-              : key === "KABUPATEN"
-              ? areaVotes.KABUPATEN
-              : key === "KECAMATAN"
-              ? areaVotes.KECAMATAN
-              : areaVotes.KELURAHAN;
+                ? areaVotes.PROVINSI
+                : key === "KABUPATEN"
+                  ? areaVotes.KABUPATEN
+                  : key === "KECAMATAN"
+                    ? areaVotes.KECAMATAN
+                    : areaVotes.KELURAHAN;
           map.set(value, (map.get(value) || 0) + 1);
         }
       }
@@ -504,7 +504,7 @@ function ResultRecordTable({
   const known = FIELD_ORDER.filter((k) => record[k] && record[k].trim() !== "");
   const extras = Object.keys(record)
     .filter(
-      (k) => !FIELD_ORDER.includes(k) && record[k] && record[k].trim() !== ""
+      (k) => !FIELD_ORDER.includes(k) && record[k] && record[k].trim() !== "",
     )
     .sort();
 
@@ -860,11 +860,11 @@ function MessageRow({
   const kk = useMemo(() => parseKK(msg.result_text || ""), [msg.result_text]);
   const generic = useMemo(
     () => parseGeneric(msg.result_text || ""),
-    [msg.result_text]
+    [msg.result_text],
   );
   const nikRecords = useMemo(
     () => parsePopulationResult(msg.result_text || ""),
-    [msg.result_text]
+    [msg.result_text],
   );
 
   const hasKK = !!(kk.found && kk.members.length > 0);
@@ -1035,7 +1035,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
 
       incoming.sort(
         (a, b) =>
-          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
       ); // keep chronological
 
       setMessages(incoming);
@@ -1048,6 +1048,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
     const handler = (msg: any) => {
       try {
         const parsed: BotResultSocket = JSON.parse(msg);
+        console.log("Received bot_msg via socket:", parsed);
         if (isIntroText(parsed.result_text)) return;
 
         const dataMsg: BotResult = {
@@ -1063,8 +1064,10 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
           updated_at: parsed.updated_at,
         };
 
+        // console.log("dataMsg", dataMsg.result_text);
+
         setMessages((prev) => {
-          if (prev.some((m) => m.id === dataMsg.id)) return prev; // dedupe
+          // if (prev.some((m) => m.id === dataMsg.id)) return prev; // dedupe
           return [...prev, dataMsg]; // append to bottom
         });
       } catch (e) {
@@ -1120,7 +1123,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
             .filter(
               (msg) =>
                 (msg.result_text && msg.result_text.trim() !== "") ||
-                msg.mime_type === "image/jpeg"
+                msg.mime_type === "image/jpeg",
             )
             /* IMPORTANT: no sort here—use state order */
             .map((msg, i) => {

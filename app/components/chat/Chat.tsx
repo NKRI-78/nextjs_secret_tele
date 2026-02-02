@@ -19,6 +19,7 @@ const TYPE_LABELS: Record<string, string> = {
   nik: "NIK",
   cekkk: "Cek KK",
   perusahaan: "Perusahaan",
+  fr: "Face Recognition",
 };
 
 export default function Chat({
@@ -72,7 +73,7 @@ export default function Chat({
   // inisialisasi status open/close per group dari items
   useEffect(() => {
     const keys = Array.from(
-      new Set(items.map((i) => i.type).filter(Boolean))
+      new Set(items.map((i) => i.type).filter(Boolean)),
     ) as string[];
     setOpenGroups((prev) => {
       const next = { ...prev };
@@ -92,7 +93,7 @@ export default function Chat({
   const { singleResult, groups } = useMemo(() => {
     const kw = query.toLowerCase();
     const list = items.filter((c) =>
-      (c.name + " " + c.lastMessage).toLowerCase().includes(kw)
+      (c.name + " " + c.lastMessage).toLowerCase().includes(kw),
     );
 
     // result: hanya ambil satu (pertama yang ditemukan)
@@ -182,7 +183,7 @@ export default function Chat({
                 onClick={() => onSelect(singleResult)}
                 className={classNames(
                   "section-title group flex w-full items-center gap-3 px-3 py-2 transition",
-                  selectedId === singleResult.id && "bg-cyber-dark"
+                  selectedId === singleResult.id && "bg-cyber-dark",
                 )}
               >
                 <div className="min-w-0 flex-1 text-left">
@@ -245,14 +246,14 @@ function CollapsibleSection({
         className={classNames(
           "section-title",
           "flex w-full items-center justify-between px-3 pb-2 pt-3",
-          "text-xs font-medium uppercase tracking-wide text-gray-500"
+          "text-xs font-medium uppercase tracking-wide text-gray-500",
         )}
       >
         <span>{title}</span>
         <svg
           className={classNames(
             "h-4 w-4 transition-transform",
-            open ? "rotate-180" : "rotate-0"
+            open ? "rotate-180" : "rotate-0",
           )}
           viewBox="0 0 20 20"
           fill="currentColor"
@@ -290,7 +291,7 @@ function ChatRow({
       onClick={onClick}
       className={classNames(
         "group flex w-full items-center gap-4 px-3 py-2 border-radius-cyber-dark bg-cyber-dark transition",
-        selected && "bg-cyber-dark-outlined"
+        selected && "bg-cyber-dark-outlined",
       )}
     >
       <Avatar name={item.name} icon={item.icon} />

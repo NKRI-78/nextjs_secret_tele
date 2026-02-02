@@ -43,11 +43,12 @@ const MessageList = ({
 
   const listRef = useRef<HTMLDivElement>(null);
   const username = "saya";
+  const isFR = selected?.name === "Face Recognition";
 
   // Derive a stable key per-chat
   const chatKey = useMemo(
     () => (selected?.id ? String(selected.id) : "no-chat"),
-    [selected?.id]
+    [selected?.id],
   );
 
   // Local state (single source of truth)
@@ -64,7 +65,7 @@ const MessageList = ({
       typeof window !== "undefined"
         ? localStorage.getItem(keyMsgs(chatKey))
         : null,
-      []
+      [],
     );
     setMessages(Array.isArray(storedMsgs) ? storedMsgs : []);
 
@@ -72,7 +73,7 @@ const MessageList = ({
       typeof window !== "undefined"
         ? localStorage.getItem(keyDraft(chatKey))
         : null,
-      ""
+      "",
     );
     setInput(storedDraft || "");
 
@@ -85,13 +86,13 @@ const MessageList = ({
       try {
         localStorage.setItem(
           keyMsgs(chatKey),
-          JSON.stringify(next.slice(-500))
+          JSON.stringify(next.slice(-500)),
         );
       } catch (e) {
         console.warn("Failed to persist local messages:", e);
       }
     },
-    [chatKey]
+    [chatKey],
   );
 
   const scrollSmart = useCallback(() => {
@@ -173,7 +174,7 @@ const MessageList = ({
       } else {
         formData.append(
           "message",
-          `${selected?.command ?? ""} ${input.trim()}`.trim()
+          `${selected?.command ?? ""} ${input.trim()}`.trim(),
         );
       }
 
@@ -204,7 +205,7 @@ const MessageList = ({
                 ...m,
                 text: ((m.text || "") + "\n\n(❗ gagal terkirim)").trim(),
               }
-            : m
+            : m,
         );
         // persistNow(next); // <-- persist failure state
         return next;
@@ -245,44 +246,71 @@ const MessageList = ({
                 {selected?.name === "Kartu Keluarga"
                   ? "Masukkan nomor kartu keluarga yang ingin anda cari"
                   : selected?.name === "N.I.K"
-                  ? "Masukkan nomor induk kependudukan yang ingin anda cari"
-                  : selected?.name === "Registrasi Nomor Telepon"
-                  ? "Masukkan nomor telepon yang ingin anda cari"
-                  : "Isi data dengan benar agar proses berjalan lancar"}
+                    ? "Masukkan nomor induk kependudukan yang ingin anda cari"
+                    : selected?.name === "Registrasi Nomor Telepon"
+                      ? "Masukkan nomor telepon yang ingin anda cari"
+                      : selected?.name === "Face Recognition"
+                        ? "Masukkan foto wajah yang ingin anda cari"
+                        : "Isi data dengan benar agar proses berjalan lancar"}
               </h3>
             </h1>
 
             {/* Composer di tengah */}
             <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
-              <input
-                type="tel"
-                inputMode="numeric"
-                value={input}
-                onChange={(e) => {
-                  const numeric = e.target.value.replace(/\D/g, "");
-                  setInput(numeric);
-                  // try {
-                  //   localStorage.setItem(keyDraft(chatKey), numeric);
-                  // } catch (err) {
-                  //   console.warn("Failed to persist draft:", err);
-                  // }
-                }}
-                onKeyDown={(e) =>
-                  !sendingMessage && e.key === "Enter" && handleSubmit()
-                }
-                disabled={sendingMessage || !selected}
-                className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                placeholder={
-                  !selected
-                    ? "Select a chat"
-                    : sendingMessage
-                    ? "Sending..."
-                    : `${selected.placeholder}`
-                }
-              />
+              {!isFR && (
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  value={input}
+                  onChange={(e) => {
+                    const numeric = e.target.value.replace(/\D/g, "");
+                    setInput(numeric);
+                  }}
+                  onKeyDown={(e) =>
+                    !sendingMessage && e.key === "Enter" && handleSubmit()
+                  }
+                  disabled={sendingMessage || !selected}
+                  className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  placeholder={
+                    !selected
+                      ? "Select a chat"
+                      : sendingMessage
+                        ? "Sending..."
+                        : `${selected.placeholder}`
+                  }
+                />
+              )}
+              {isFR && (
+                <>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="fr-upload"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+
+                      setUploadedFile(file);
+                      setPreviewUrl(URL.createObjectURL(file));
+                    }}
+                    disabled={sendingMessage}
+                  />
+
+                  <label
+                    htmlFor="fr-upload"
+                    className="flex-1 cursor-pointer rounded-full border border-dashed border-white/60 bg-white/10 px-4 py-3 text-sm text-white text-center hover:bg-white/20 transition"
+                  >
+                    {uploadedFile ? uploadedFile.name : "Upload foto wajah"}
+                  </label>
+                </>
+              )}
+
               <button
                 onClick={handleSubmit}
-                disabled={sendingMessage || !selected}
+                disabled={
+                  sendingMessage || !selected || (isFR && !uploadedFile)
+                }
                 className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
               >
                 {sendingMessage ? (
@@ -305,6 +333,8 @@ const MessageList = ({
                       d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                     />
                   </svg>
+                ) : isFR ? (
+                  "📷"
                 ) : (
                   "➤"
                 )}
