@@ -903,7 +903,7 @@ function MessageRow({
   return (
     <div className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
       <div
-        className={`relative p-3 rounded-xl max-w-[95%] text-sm leading-snug shadow-md
+        className={`relative mb-3 p-3 rounded-xl max-w-[95%] text-sm leading-snug shadow-md
           ${
             isMe
               ? "bg-chatbot text-white rounded-br-none"
@@ -1093,6 +1093,28 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
 
   if (navbar === "settings") return <Settings />;
 
+  // penambahan helper
+  function shouldHideMessage(msg: any, index: number, all: any[]) {
+    const text = msg.result_text?.toLowerCase().trim() || "";
+
+    // 1. system / info message
+    if (
+      text === "on proses" ||
+      text.includes("pesan berhasil dikirim") ||
+      text.includes("pilih fitur") ||
+      text.includes("gunakan tombol")
+    ) {
+      return true;
+    }
+
+    // 2. loading text, tapi biarkan yang TERAKHIR
+    if (text.includes("mengirim permintaan")) {
+      return index !== all.length - 1;
+    }
+
+    return false;
+  }
+
   return (
     <div className="w-full h-full flex flex-col bg-white md:rounded-none">
       {error && <div className="text-center text-red-500">{error}</div>}
@@ -1120,11 +1142,24 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         {/* remove justify-center so messages start at top and grow downward */}
         <div className="min-h-[100dvh] flex flex-col px-1 space-y-3">
           {messages
-            .filter(
-              (msg) =>
-                (msg.result_text && msg.result_text.trim() !== "") ||
-                msg.mime_type === "image/jpeg",
-            )
+            // .filter(
+            //   (msg) =>
+            //     (msg.result_text && msg.result_text.trim() !== "") ||
+            //     msg.mime_type === "image/jpeg",
+            // )
+            .filter((msg, i, arr) => {
+              // tetap tampilkan image
+              if (msg.mime_type === "image/jpeg") return true;
+
+              // tidak ada text → skip
+              if (!msg.result_text || msg.result_text.trim() === "")
+                return false;
+
+              // helper filter
+              if (shouldHideMessage(msg, i, arr)) return false;
+
+              return true;
+            })
             /* IMPORTANT: no sort here—use state order */
             .map((msg, i) => {
               const isMe = msg.username === username;
