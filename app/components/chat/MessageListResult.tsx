@@ -494,6 +494,48 @@ function CopyBadge({
   );
 }
 
+// Helper deteksi FR
+function isFaceRecognitionResult(text?: string | null): boolean {
+  if (!text) return false;
+  return (
+    /FACE\s+RECOGNITION\s+RESULT/i.test(text) ||
+    (/--RESULT\s+\d+--/i.test(text) && /KEMIRIPAN\s*:/i.test(text))
+  );
+}
+
+type FRRecord = {
+  result: number;
+  nik?: string;
+  similarity?: string;
+  nama?: string;
+  ttl?: string;
+  alamat?: string;
+};
+
+function parseFaceRecognition(rawText: string): FRRecord[] {
+  if (!rawText) return [];
+
+  const text = stripCodeFence(rawText);
+
+  const blocks = text.split(/--RESULT\s+\d+--/i).slice(1);
+
+  return blocks.map((block, idx) => {
+    const get = (key: string) => {
+      const m = block.match(new RegExp(`${key}\\s*:\\s*(.+)`, "i"));
+      return m?.[1]?.trim();
+    };
+
+    return {
+      result: idx + 1,
+      nik: get("NIK"),
+      similarity: get("KEMIRIPAN"),
+      nama: get("NAMA"),
+      ttl: get("TTL"),
+      alamat: get("ALAMAT"),
+    };
+  });
+}
+
 function ResultRecordTable({
   record,
   index,
@@ -867,6 +909,16 @@ function MessageRow({
     [msg.result_text],
   );
 
+  const isFR = useMemo(
+    () => isFaceRecognitionResult(msg.result_text),
+    [msg.result_text],
+  );
+
+  const frRecords = useMemo(
+    () => (isFR ? parseFaceRecognition(msg.result_text || "") : []),
+    [msg.result_text, isFR],
+  );
+
   const hasKK = !!(kk.found && kk.members.length > 0);
   const hasGenericContent =
     (generic.people?.length ?? 0) > 0 ||
@@ -877,9 +929,14 @@ function MessageRow({
   const hasGeneric = !!(generic.found && hasGenericContent);
   const hasNIK = !!(nikRecords.length > 0);
 
-  const showKK = hasKK;
-  const showGeneric = !showKK && hasGeneric;
-  const showNIK = !showKK && !showGeneric && hasNIK;
+  // const showKK = hasKK;
+  // const showGeneric = !showKK && hasGeneric;
+  // const showNIK = !showKK && !showGeneric && hasNIK;
+
+  const showFR = isFR && frRecords.length > 0;
+  const showKK = !showFR && hasKK;
+  const showGeneric = !showFR && hasGeneric;
+  const showNIK = !showFR && hasNIK;
 
   async function copyAllLikeScreenshot() {
     const text = buildExportText({
@@ -898,6 +955,47 @@ function MessageRow({
     } catch (e) {
       console.error("Copy failed:", e);
     }
+  }
+
+  function FaceRecognitionTable({ records }: { records: FRRecord[] }) {
+    return (
+      <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
+        <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10">
+          Face Recognition Result
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-xs">
+            <thead className="bg-white/10">
+              <tr>
+                <th className="px-3 py-2 text-left  w-[50px]">No</th>
+                <th className="px-3 py-2 text-left  w-[80px]">Kemiripan</th>
+                <th className="px-3 py-2 text-left">NIK</th>
+                <th className="px-3 py-2 text-left">Nama</th>
+                <th className="px-3 py-2 text-left">TTL</th>
+                <th className="px-3 py-2 text-left">Alamat</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((r) => (
+                <tr key={r.result} className="odd:bg-white/0 even:bg-white/5">
+                  <td className="px-3 py-2">{r.result}</td>
+                  <td className="px-3 py-2 font-semibold text-emerald-300">
+                    {r.similarity || "-"}
+                  </td>
+                  <td className="px-3 py-2 font-mono w-[120px]">
+                    {r.nik || "-"}
+                  </td>
+                  <td className="px-3 py-2">{r.nama || "-"}</td>
+                  <td className="px-3 py-2">{r.ttl || "-"}</td>
+                  <td className="px-3 py-2 break-words">{r.alamat || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -926,56 +1024,60 @@ function MessageRow({
           </div>
         )}
 
-        <div ref={captureRef}>
-          {showKK ? (
-            <KKFamilyTable nkk={kk.nkk} area={kk.area} members={kk.members} />
-          ) : showGeneric ? (
-            <div className="space-y-2">
-              {generic.queryPhone ? (
-                <div className="text-xs text-white/90">
-                  <span className="text-white/70">Phone</span>:{" "}
-                  <span className="font-medium">{generic.queryPhone}</span>
-                </div>
-              ) : null}
-              {generic.contact ? (
-                <div className="text-xs text-white/90">
-                  <span className="text-white/70">Contact</span>:{" "}
-                  {generic.contact}
-                </div>
-              ) : null}
-              {generic.regData ? (
-                <div className="text-xs text-white/90">
-                  <span className="text-white/70">Reg Data</span>:{" "}
-                  {generic.regData}
-                </div>
-              ) : null}
-              {generic.wallets ? (
-                <WalletTable wallets={generic.wallets} />
-              ) : null}
-              {generic.people.length > 0 ? (
-                <div className="mt-2">
-                  {generic.people.map((p, idx) => (
-                    <PersonRecordTable key={idx} person={p} index={idx} />
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : showNIK ? (
-            <ParsedResult records={nikRecords} />
-          ) : (
-            <div className="whitespace-pre-wrap">{msg.result_text}</div>
-          )}
+        {!showFR && (
+          <div ref={captureRef}>
+            {showKK ? (
+              <KKFamilyTable nkk={kk.nkk} area={kk.area} members={kk.members} />
+            ) : showGeneric ? (
+              <div className="space-y-2">
+                {generic.queryPhone ? (
+                  <div className="text-xs text-white/90">
+                    <span className="text-white/70">Phone</span>:{" "}
+                    <span className="font-medium">{generic.queryPhone}</span>
+                  </div>
+                ) : null}
+                {generic.contact ? (
+                  <div className="text-xs text-white/90">
+                    <span className="text-white/70">Contact</span>:{" "}
+                    {generic.contact}
+                  </div>
+                ) : null}
+                {generic.regData ? (
+                  <div className="text-xs text-white/90">
+                    <span className="text-white/70">Reg Data</span>:{" "}
+                    {generic.regData}
+                  </div>
+                ) : null}
+                {generic.wallets ? (
+                  <WalletTable wallets={generic.wallets} />
+                ) : null}
+                {generic.people.length > 0 ? (
+                  <div className="mt-2">
+                    {generic.people.map((p, idx) => (
+                      <PersonRecordTable key={idx} person={p} index={idx} />
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : showNIK ? (
+              <ParsedResult records={nikRecords} />
+            ) : (
+              <div className="whitespace-pre-wrap">{msg.result_text}</div>
+            )}
 
-          {msg.mime_type === "image/jpeg" && (
-            <img
-              src={`${msg.file_url}`}
-              alt="Preview"
-              className="max-w-full rounded-lg shadow-lg mt-2"
-              onLoad={scrollSmart}
-              onClick={(e) => e.stopPropagation()}
-            />
-          )}
-        </div>
+            {msg.mime_type === "image/jpeg" && (
+              <img
+                src={`${msg.file_url}`}
+                alt="Preview"
+                className="max-w-full rounded-lg shadow-lg mt-2"
+                onLoad={scrollSmart}
+                onClick={(e) => e.stopPropagation()}
+              />
+            )}
+          </div>
+        )}
+
+        {showFR && <FaceRecognitionTable records={frRecords} />}
 
         <div
           className={`text-[10px] ${

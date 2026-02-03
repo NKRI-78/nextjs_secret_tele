@@ -75,7 +75,7 @@ const INITIAL_CHATS: ChatItem[] = [
     icon: "/images/fr.png",
     lastMessage: "",
     time: "00:00",
-    command: "-",
+    command: "/fr",
     type: "profiling",
     placeholder: "Face Recognition",
   },

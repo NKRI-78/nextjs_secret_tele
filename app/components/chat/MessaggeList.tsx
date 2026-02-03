@@ -170,7 +170,7 @@ const MessageList = ({
       formData.append("chat", "@AnakAsuhanRembolan_iBot");
       if (uploadedFile) {
         formData.append("file", uploadedFile);
-        formData.append("message", "");
+        formData.append("message", "/fr");
       } else {
         formData.append(
           "message",
