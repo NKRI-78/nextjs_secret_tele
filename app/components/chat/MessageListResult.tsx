@@ -983,7 +983,7 @@ function MessageRow({
                   <td className="px-3 py-2 font-semibold text-emerald-300">
                     {r.similarity || "-"}
                   </td>
-                  <td className="px-3 py-2 font-mono w-[120px]">
+                  <td className="px-3 py-2 font-mono w-[125px]">
                     {r.nik || "-"}
                   </td>
                   <td className="px-3 py-2">{r.nama || "-"}</td>
