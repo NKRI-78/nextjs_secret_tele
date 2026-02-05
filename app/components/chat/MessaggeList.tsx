@@ -251,13 +251,13 @@ const MessageList = ({
               <h3 className="text-sm font-normal text-gray-200">
                 {selected?.name === "Kartu Keluarga"
                   ? "Masukkan nomor kartu keluarga yang ingin anda cari"
-                  : selected?.name === "N.I.K"
+                  : selected?.name === "Nomor Induk Kependudukan"
                     ? "Masukkan nomor induk kependudukan yang ingin anda cari"
                     : selected?.name === "Registrasi Nomor Telepon"
                       ? "Masukkan nomor telepon yang ingin anda cari"
                       : selected?.name === "Face Recognition"
                         ? "Masukkan foto wajah yang ingin anda cari"
-                        : selected?.name === "Name"
+                        : selected?.name === "Nama Lengkap"
                           ? "Masukkan nama yang ingin Anda cari"
                           : "Isi data dengan benar agar proses berjalan lancar"}
               </h3>

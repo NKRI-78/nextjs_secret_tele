@@ -41,13 +41,13 @@ const INITIAL_CHATS: ChatItem[] = [
   },
   {
     id: "3",
-    name: "N.I.K",
+    name: "Nomor Induk Kependudukan",
     icon: "/images/nik.png",
     lastMessage: "",
     time: "00:00",
     command: "/nik",
     type: "profiling",
-    placeholder: "N.I.K",
+    placeholder: "Nomor Induk Kependudukan",
   },
   {
     id: "4",
@@ -81,13 +81,13 @@ const INITIAL_CHATS: ChatItem[] = [
   },
   {
     id: "7",
-    name: "Name",
+    name: "Nama Lengkap",
     icon: "/images/name.png",
     lastMessage: "",
     time: "00:00",
     command: "/name",
     type: "profiling",
-    placeholder: "Name",
+    placeholder: "Nama Lengkap",
   },
 ];
 

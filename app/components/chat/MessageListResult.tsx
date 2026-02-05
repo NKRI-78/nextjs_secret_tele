@@ -730,9 +730,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
               <th className="px-3 py-2 text-left">Nama</th>
               <th className="px-3 py-2 text-left">TTL</th>
               <th className="px-3 py-2 text-left">JK</th>
-              <th className="px-3 py-2 text-left">NIK Ibu</th>
               <th className="px-3 py-2 text-left">Nama Ibu</th>
-              <th className="px-3 py-2 text-left">NIK Ayah</th>
               <th className="px-3 py-2 text-left">Nama Ayah</th>
               <th className="px-3 py-2 text-left">Alamat</th>
             </tr>
@@ -758,14 +756,8 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
                 <td className="px-3 py-2">{r.TTL || "-"}</td>
                 <td className="px-3 py-2">{r.JK || "-"}</td>
 
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {r["NIK IBU"] || "-"}
-                </td>
                 <td className="px-3 py-2">{r["NAMA IBU"] || "-"}</td>
 
-                <td className="px-3 py-2 whitespace-nowrap">
-                  {r["NIK AYAH"] || "-"}
-                </td>
                 <td className="px-3 py-2">{r["NAMA AYAH"] || "-"}</td>
 
                 <td className="px-3 py-2 break-words min-w-[300px]">
