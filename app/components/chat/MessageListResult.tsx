@@ -304,6 +304,16 @@ type KKParsed = {
   members: KKMember[];
 };
 
+function isNameResult(text?: string | null): boolean {
+  if (!text) return false;
+
+  const hasHeader = /Data Ditemukan/i.test(text) && /💡\s*\d+/i.test(text);
+
+  if (!hasHeader) return false;
+
+  return /NAMA\s*:/i.test(text);
+}
+
 // === UPDATED: alias & normalizer diperluas ===
 function normalizeKeyKK(k: string): keyof KKMember | "OTHER" {
   const t = k.trim().toUpperCase();
@@ -536,6 +546,48 @@ function parseFaceRecognition(rawText: string): FRRecord[] {
   });
 }
 
+function parseNameResult(rawText: string): ParsedRecord[] {
+  if (!rawText) return [];
+
+  const text = stripCodeFence(rawText)
+    // buang header
+    .replace(/\+{3}[\s\S]*?\+{3}/i, "")
+    .trim();
+
+  // split berdasarkan 💡 nomor
+  const blocks = text
+    .split(/💡\s*\d+/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  const records: ParsedRecord[] = [];
+
+  for (const block of blocks) {
+    const lines = block
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const rec: ParsedRecord = {};
+
+    for (const line of lines) {
+      const m = line.match(/^([A-Z\s]+?)\s*:\s*(.*)$/);
+      if (!m) continue;
+
+      const key = m[1].trim().toUpperCase();
+      const val = (m[2] || "").trim();
+
+      rec[key] = val;
+    }
+
+    if (Object.keys(rec).length) {
+      records.push(rec);
+    }
+  }
+
+  return records;
+}
+
 function ResultRecordTable({
   record,
   index,
@@ -656,6 +708,74 @@ function WalletTable({ wallets }: { wallets: Wallets }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function NameResultTable({ records }: { records: ParsedRecord[] }) {
+  if (!records.length) return null;
+
+  return (
+    <div className="mt-2 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+      <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10">
+        Hasil Pencarian Nama
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[1400px] text-xs table-auto">
+          <thead className="bg-white/10">
+            <tr>
+              <th className="px-3 py-2 text-left">NIK</th>
+              <th className="px-3 py-2 text-left">NKK</th>
+              <th className="px-3 py-2 text-left">Nama</th>
+              <th className="px-3 py-2 text-left">TTL</th>
+              <th className="px-3 py-2 text-left">JK</th>
+              <th className="px-3 py-2 text-left">NIK Ibu</th>
+              <th className="px-3 py-2 text-left">Nama Ibu</th>
+              <th className="px-3 py-2 text-left">NIK Ayah</th>
+              <th className="px-3 py-2 text-left">Nama Ayah</th>
+              <th className="px-3 py-2 text-left">Alamat</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {records.map((r, i) => (
+              <tr key={r.NIK || i} className="odd:bg-white/0 even:bg-white/5">
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {r.NIK ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono tabular-nums">{r.NIK}</span>
+                      <CopyBadge value={r.NIK} />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
+                <td className="px-3 py-2 whitespace-nowrap">{r.NKK || "-"}</td>
+
+                <td className="px-3 py-2">{r.NAMA || "-"}</td>
+                <td className="px-3 py-2">{r.TTL || "-"}</td>
+                <td className="px-3 py-2">{r.JK || "-"}</td>
+
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {r["NIK IBU"] || "-"}
+                </td>
+                <td className="px-3 py-2">{r["NAMA IBU"] || "-"}</td>
+
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {r["NIK AYAH"] || "-"}
+                </td>
+                <td className="px-3 py-2">{r["NAMA AYAH"] || "-"}</td>
+
+                <td className="px-3 py-2 break-words min-w-[300px]">
+                  {r.ALAMAT || "-"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -794,6 +914,8 @@ function buildExportText({
   generic,
   showNIK,
   nikRecords,
+  showName,
+  nameRecords,
   raw,
 }: {
   showKK: boolean;
@@ -802,6 +924,8 @@ function buildExportText({
   generic: GenericParsed;
   showNIK: boolean;
   nikRecords: ParsedRecord[];
+  showName: boolean;
+  nameRecords: ParsedRecord[];
   raw: string;
 }) {
   if (showKK) {
@@ -837,6 +961,16 @@ function buildExportText({
       parts.push(`Nama Ibu: ${m.NAMA_IBU ?? "-"}`);
       parts.push(`NIK Ayah: ${m.NIK_AYAH ?? "-"}`);
       parts.push(`Nama Ayah: ${m.NAMA_AYAH ?? "-"}`);
+      parts.push("");
+    });
+    return parts.join("\n");
+  }
+  if (showName && nameRecords.length) {
+    const parts: string[] = [];
+    parts.push("=== DATA PENCARIAN NAMA ===");
+    nameRecords.forEach((r, i) => {
+      parts.push(`-- Record ${i + 1} --`);
+      parts.push(stringifyRecord(r));
       parts.push("");
     });
     return parts.join("\n");
@@ -909,6 +1043,16 @@ function MessageRow({
     [msg.result_text],
   );
 
+  const isName = useMemo(
+    () => isNameResult(msg.result_text),
+    [msg.result_text],
+  );
+
+  const nameRecords = useMemo(
+    () => (isName ? parseNameResult(msg.result_text || "") : []),
+    [msg.result_text, isName],
+  );
+
   const isFR = useMemo(
     () => isFaceRecognitionResult(msg.result_text),
     [msg.result_text],
@@ -934,9 +1078,10 @@ function MessageRow({
   // const showNIK = !showKK && !showGeneric && hasNIK;
 
   const showFR = isFR && frRecords.length > 0;
-  const showKK = !showFR && hasKK;
-  const showGeneric = !showFR && hasGeneric;
-  const showNIK = !showFR && hasNIK;
+  const showName = !showFR && isName && nameRecords.length > 0;
+  const showKK = !showFR && !showName && hasKK;
+  const showGeneric = !showFR && !showName && hasGeneric;
+  const showNIK = !showFR && !showName && hasNIK;
 
   async function copyAllLikeScreenshot() {
     const text = buildExportText({
@@ -946,8 +1091,11 @@ function MessageRow({
       generic,
       showNIK,
       nikRecords,
+      showName,
+      nameRecords,
       raw: msg.result_text || "",
     });
+
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -1009,7 +1157,7 @@ function MessageRow({
           }`}
         style={{ wordBreak: "break-word" }}
       >
-        {(showKK || showNIK) && (
+        {(showKK || showNIK || showName) && (
           <div className="absolute -top-3 right-2 flex gap-1">
             <button
               className="text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
@@ -1026,7 +1174,9 @@ function MessageRow({
 
         {!showFR && (
           <div ref={captureRef}>
-            {showKK ? (
+            {showName ? (
+              <NameResultTable records={nameRecords} />
+            ) : showKK ? (
               <KKFamilyTable nkk={kk.nkk} area={kk.area} members={kk.members} />
             ) : showGeneric ? (
               <div className="space-y-2">
