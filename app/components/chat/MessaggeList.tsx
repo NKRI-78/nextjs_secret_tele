@@ -217,6 +217,12 @@ const MessageList = ({
 
   if (navbar === "settings") return <Settings />;
 
+  const isNumericInput = [
+    "Kartu Keluarga",
+    "N.I.K",
+    "Registrasi Nomor Telepon",
+  ].includes(selected?.name ?? "");
+
   return (
     <div className="w-full h-full flex flex-col bg-white md:rounded-none">
       {error && <div className="text-center text-red-500">{error}</div>}
@@ -251,7 +257,9 @@ const MessageList = ({
                       ? "Masukkan nomor telepon yang ingin anda cari"
                       : selected?.name === "Face Recognition"
                         ? "Masukkan foto wajah yang ingin anda cari"
-                        : "Isi data dengan benar agar proses berjalan lancar"}
+                        : selected?.name === "Name"
+                          ? "Masukkan nama yang ingin Anda cari"
+                          : "Isi data dengan benar agar proses berjalan lancar"}
               </h3>
             </h1>
 
@@ -259,12 +267,15 @@ const MessageList = ({
             <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
               {!isFR && (
                 <input
-                  type="tel"
-                  inputMode="numeric"
+                  type={isNumericInput ? "tel" : "text"}
+                  inputMode={isNumericInput ? "numeric" : "text"}
                   value={input}
                   onChange={(e) => {
-                    const numeric = e.target.value.replace(/\D/g, "");
-                    setInput(numeric);
+                    const value = isNumericInput
+                      ? e.target.value.replace(/\D/g, "")
+                      : e.target.value;
+
+                    setInput(value);
                   }}
                   onKeyDown={(e) =>
                     !sendingMessage && e.key === "Enter" && handleSubmit()

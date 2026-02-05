@@ -79,6 +79,16 @@ const INITIAL_CHATS: ChatItem[] = [
     type: "profiling",
     placeholder: "Face Recognition",
   },
+  {
+    id: "7",
+    name: "Name",
+    icon: "/images/name.png",
+    lastMessage: "",
+    time: "00:00",
+    command: "/name",
+    type: "profiling",
+    placeholder: "Name",
+  },
 ];
 
 export default function ChatWrapper() {
