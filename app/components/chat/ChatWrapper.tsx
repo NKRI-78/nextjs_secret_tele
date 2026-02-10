@@ -110,7 +110,8 @@ export default function ChatWrapper() {
       title="Bot"
       leftLabel="Chats"
       className="bg-gray-100"
-      leftWidthMd="md:w-[340px] lg:w-[380px]"
+      // leftWidthMd="md:w-[340px] lg:w-[380px]"
+      leftWidthMd="md:w-[260px] lg:w-[280px]"
     >
       {{
         left: (

@@ -15,7 +15,12 @@ type Props = {
   /** Content slots */
   children: {
     left: React.ReactNode;
+    // right: React.ReactNode;
     right: React.ReactNode;
+    rightHeader?: (props: {
+      open: boolean;
+      toggle: () => void;
+    }) => React.ReactNode;
   };
 };
 
@@ -43,12 +48,25 @@ export default function ResponsiveTwoPane({
   }, []);
 
   // Ensure drawer state is reset appropriately on resize to md+
+  // useEffect(() => {
+  //   function onResize() {
+  //     if (window.innerWidth >= 768) {
+  //       setOpen(false);
+  //     }
+  //   }
+  //   window.addEventListener("resize", onResize);
+  //   return () => window.removeEventListener("resize", onResize);
+  // }, []);
   useEffect(() => {
     function onResize() {
-      if (window.innerWidth >= 768) {
-        setOpen(false);
+      if (window.innerWidth < 768) {
+        setOpen(false); // mobile default close
+      } else {
+        setOpen(true); // desktop default open
       }
     }
+
+    onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -74,10 +92,17 @@ export default function ResponsiveTwoPane({
 
       {/* Desktop left pane (docked) */}
       <aside
-        className={`hidden md:flex ${leftWidthMd} md:flex-shrink-0 md:flex-col border-right-cyber`}
+        // className={`hidden md:flex ${leftWidthMd} md:flex-shrink-0 md:flex-col border-right-cyber`}
+        className={`
+          hidden md:flex md:flex-col
+          transition-all duration-300
+          border-right-cyber
+          ${open ? leftWidthMd : "md:w-0"}
+          overflow-hidden
+        `}
         aria-label={leftLabel}
       >
-        {children.left}
+        {open && children.left}
       </aside>
 
       {/* Mobile left pane (off-canvas) */}
@@ -90,7 +115,7 @@ export default function ResponsiveTwoPane({
         />
       )}
       {/* Drawer */}
-      <div
+      {/* <div
         id="mobile-sidebar"
         role="dialog"
         aria-modal="true"
@@ -112,7 +137,7 @@ export default function ResponsiveTwoPane({
         <div className="h-[calc(100dvh-3rem)] overflow-y-auto">
           {children.left}
         </div>
-      </div>
+      </div> */}
 
       {/* Right/content pane */}
       <section className="flex-1 min-h-0 md:h-[100dvh] overflow-y-auto">
