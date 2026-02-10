@@ -192,7 +192,7 @@ p {
 
 @layer base {
   * {
-    @apply border-border;rg
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
