@@ -116,7 +116,7 @@ export default function Chat({
   return (
     <div className="flex h-full flex-col">
       <div className="sticky top-0 z-10 bg-cyber backdrop-blur">
-        <div className="flex items-center gap-4 p-5">
+        <div className="flex items-center gap-4 md:p-5">
           {/* (opsional) kolom search, sudah ada state nya */}
           {/* <div className="flex-1">
             <input
@@ -127,7 +127,7 @@ export default function Chat({
             />
           </div> */}
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto hidden md:flex items-center gap-2">
             <div className="relative">
               <button
                 ref={btnRef}
