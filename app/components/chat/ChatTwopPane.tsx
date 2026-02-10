@@ -2,8 +2,12 @@
 
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import Cookies from "js-cookie";
-import { useRouter } from "next/navigation";
+// import Cookies from "js-cookie";
+// import { useRouter } from "next/navigation";
+
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@redux/store";
+import { setShowLogoutModal } from "@redux/slices/modalSlice";
 
 type Props = {
   /** Page title for the mobile top bar */
@@ -38,11 +42,12 @@ export default function ResponsiveTwoPane({
   leftWidthMd = "md:w-[320px]",
   children,
 }: Props) {
-  const router = useRouter();
+  // const router = useRouter();
 
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const [openLogout, setOpenLogout] = useState(false);
+  const dispatch = useDispatch<AppDispatch>();
 
   // Close the drawer when pressing Escape
   useEffect(() => {
@@ -77,11 +82,17 @@ export default function ResponsiveTwoPane({
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const handleLogout = () => {
-    Cookies.remove("token");
-    Cookies.remove("user_id");
-    router.push("/auth/login");
-    setOpenLogout(false);
+  // const handleLogout = () => {
+  //   Cookies.remove("token");
+  //   Cookies.remove("user_id");
+  //   router.push("/auth/login");
+  //   setOpenLogout(false);
+  // };
+
+  const handleLogoutClick = () => {
+    dispatch(setShowLogoutModal(true)); // buka modal global
+    setOpenLogout(false); // tutup dropdown avatar
+    setOpen(false); // tutup drawer mobile
   };
 
   return (
@@ -93,7 +104,10 @@ export default function ResponsiveTwoPane({
           aria-label={`Open ${leftLabel}`}
           aria-controls="mobile-sidebar"
           aria-expanded={open}
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            setOpen(true);
+            setOpenLogout(false);
+          }}
           className="inline-flex items-center gap-2"
         >
           <Menu className="h-5 w-5" />
@@ -172,7 +186,7 @@ export default function ResponsiveTwoPane({
                         role="menuitem"
                         tabIndex={0}
                         className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 focus:bg-red-50"
-                        onClick={handleLogout}
+                        onClick={handleLogoutClick}
                       >
                         Log out
                       </button>
@@ -186,7 +200,10 @@ export default function ResponsiveTwoPane({
           <button
             type="button"
             aria-label="Close sidebar"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false);
+              setOpenLogout(false);
+            }}
             className="p-1 rounded hover:bg-gray-100"
           >
             <X className="h-5 w-5" />
