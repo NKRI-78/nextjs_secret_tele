@@ -1,9 +1,13 @@
 "use client";
 
-import Cookies from "js-cookie";
+// import Cookies from "js-cookie";
 import { classNames, initials } from "@/app/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
+
+import { useDispatch } from "react-redux";
+import { AppDispatch } from "@redux/store";
+import { setShowLogoutModal } from "@redux/slices/modalSlice";
 
 type ChatItem = {
   id: string;
@@ -32,7 +36,9 @@ export default function Chat({
   onSelect: (item: ChatItem) => void;
 }) {
   const [query, setQuery] = useState("");
-  const router = useRouter();
+  // const router = useRouter();
+
+  const dispatch = useDispatch<AppDispatch>();
 
   // state untuk menu user (sudah ada)
   const [open, setOpen] = useState(false);
@@ -82,11 +88,16 @@ export default function Chat({
     });
   }, [items]);
 
-  const handleLogout = () => {
-    Cookies.remove("token");
-    Cookies.remove("user_id");
-    router.push("/auth/login");
-    setOpen(false);
+  // const handleLogout = () => {
+  //   Cookies.remove("token");
+  //   Cookies.remove("user_id");
+  //   router.push("/auth/login");
+  //   setOpen(false);
+  // };
+
+  const handleLogoutClick = () => {
+    dispatch(setShowLogoutModal(true)); // buka modal
+    setOpen(false); // tutup dropdown user
   };
 
   // ====== FILTER & GROUPING ======
@@ -161,7 +172,7 @@ export default function Chat({
                       role="menuitem"
                       tabIndex={0}
                       className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 focus:bg-red-50"
-                      onClick={handleLogout}
+                      onClick={handleLogoutClick}
                     >
                       Log out
                     </button>
@@ -174,7 +185,7 @@ export default function Chat({
       </div>
 
       {/* ====== LIST ====== */}
-      <div className="flex-1 overflow-y-auto p-5">
+      <div className="flex-1 overflow-y-auto p-3">
         {singleResult && (
           <div className="pb-2">
             <div className="space-y-1">
@@ -269,7 +280,7 @@ function CollapsibleSection({
 
       <div
         id={sectionId}
-        className={classNames("space-y-1", !open && "hidden", "p-2 ml-8 mt-2")}
+        className={classNames("space-y-2", !open && "hidden", "p-2 ml-2 mt-2")}
       >
         {children}
       </div>

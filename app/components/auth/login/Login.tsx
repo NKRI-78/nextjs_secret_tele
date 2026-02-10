@@ -24,7 +24,7 @@ const Login: React.FC = () => {
     e.preventDefault();
 
     const result = await dispatch(
-      loginBotSecretAsync({ val, password })
+      loginBotSecretAsync({ val, password }),
     ).unwrap();
 
     Cookies.set("username", result.data.email, {
