@@ -8,6 +8,6 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <HomeResult />;
-  // return <ChatWrapper />; //v1
+  // return <HomeResult />;
+  return <ChatWrapper />; //v1
 }
