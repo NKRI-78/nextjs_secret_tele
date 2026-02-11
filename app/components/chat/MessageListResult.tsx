@@ -22,6 +22,26 @@ function isIntroText(text?: string | null): boolean {
   return false;
 }
 
+function isHiddenText(text?: string | null): boolean {
+  if (!text) return false;
+
+  const s = text.replace(/\s+/g, " ").trim().toLowerCase();
+
+  return (
+    s.includes("foto fr berhasil dikirim!") ||
+    s.includes("pastikan struktur wajah terang dan jelas") ||
+    s.includes("please wait") ||
+    s.includes("foto fr v1 diterima!") ||
+    s.includes("pesan berhasil dikirim.") ||
+    s.includes("pilih fitur:") ||
+    s.includes("on proses") ||
+    s.includes("silakan pilih dan kirim foto dari galeri anda") ||
+    s.includes("mengirim") ||
+    s.includes("akses cp digunakan sebanyak 3 kali hari ini. tunggu proses") ||
+    s.includes("has been sent, don't spam.")
+  );
+}
+
 // ---------------------------
 // Parsing helpers (NIK-style)
 // ---------------------------
@@ -1393,14 +1413,24 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
             // )
             .filter((msg, i, arr) => {
               // tetap tampilkan image
-              if (msg.mime_type === "image/jpeg") return true;
+              // if (msg.mime_type === "image/jpeg") return true;
+              const hasText = msg.result_text && msg.result_text.trim() !== "";
 
-              // tidak ada text → skip
-              if (!msg.result_text || msg.result_text.trim() === "")
+              if (hasText && isHiddenText(msg.result_text)) {
                 return false;
+              }
+
+              if (msg.mime_type === "image/jpeg") {
+                return true;
+              }
+
+              if (hasText) {
+                return true;
+              }
 
               // helper filter
               if (shouldHideMessage(msg, i, arr)) return false;
+              // if (isHiddenText(msg.result_text)) return false;
 
               return true;
             })
