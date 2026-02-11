@@ -5,6 +5,7 @@ import profileReducer from "@redux/slices/profileSlice";
 import authReducer from "@redux/slices/authSlice";
 import featureReducer from "@redux/slices/featureSlice";
 import chatReducer from "@redux/slices/chatSlice";
+import searchReducer from "@redux/slices/searchSlice";
 
 import { enableMapSet } from "immer";
 
@@ -17,6 +18,7 @@ export const store = configureStore({
     chat: chatReducer,
     modal: modalReducer,
     profile: profileReducer,
+    search: searchReducer,
   },
 });
 
