@@ -94,7 +94,7 @@ export default function Chat({
   };
 
   // ====== FILTER & GROUPING ======
-  const { singleResult, groups, singleResultNew } = useMemo(() => {
+  const { singleResult, groups } = useMemo(() => {
     const kw = query.toLowerCase();
     const list = items.filter((c) =>
       (c.name + " " + c.lastMessage).toLowerCase().includes(kw),
@@ -102,7 +102,6 @@ export default function Chat({
 
     // result: hanya ambil satu (pertama yang ditemukan)
     const singleResult = list.find((c) => c.type === "result") ?? null;
-    const singleResultNew = list.find((c) => c.type === "result2") ?? null;
 
     // kelompokkan selain "result" berdasarkan type
     const groups: Record<string, ChatItem[]> = {};
@@ -112,7 +111,7 @@ export default function Chat({
       if (!groups[key]) groups[key] = [];
       groups[key].push(c);
     }
-    return { singleResult, groups, singleResultNew };
+    return { singleResult, groups };
   }, [items, query]);
 
   const toggleGroup = (key: string) =>
@@ -180,7 +179,7 @@ export default function Chat({
 
       {/* ====== LIST ====== */}
       <div className="flex-1 overflow-y-auto p-3">
-        {/* {singleResult && (
+        {singleResult && (
           <div className="pb-2">
             <div className="space-y-1">
               <button
@@ -204,36 +203,10 @@ export default function Chat({
               </button>
             </div>
           </div>
-        )} */}
-
-        {singleResultNew && (
-          <div className="pb-2">
-            <div className="space-y-1">
-              <button
-                key={singleResultNew.id}
-                onClick={() => onSelect(singleResultNew)}
-                className={classNames(
-                  "section-title group flex w-full items-center gap-3 px-3 py-2 transition",
-                  selectedId === singleResultNew.id && "bg-cyber-dark",
-                )}
-              >
-                <div className="min-w-0 flex-1 text-left">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-medium">
-                      {singleResultNew.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm text-gray-600" />
-                  </div>
-                </div>
-              </button>
-            </div>
-          </div>
         )}
 
         {/* GROUPS (dropdown per type) */}
-        {/* {Object.entries(groups).map(([typeKey, list]) => (
+        {Object.entries(groups).map(([typeKey, list]) => (
           <CollapsibleSection
             key={typeKey}
             title={TYPE_LABELS[typeKey] ?? typeKey}
@@ -249,7 +222,7 @@ export default function Chat({
               />
             ))}
           </CollapsibleSection>
-        ))} */}
+        ))}
       </div>
     </div>
   );
