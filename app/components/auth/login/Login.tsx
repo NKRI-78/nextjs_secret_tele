@@ -23,23 +23,24 @@ const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const result = await dispatch(
-      loginBotSecretAsync({ val, password }),
-    ).unwrap();
+    try {
+      const result = await dispatch(
+        loginBotSecretAsync({ val, password }),
+      ).unwrap();
 
-    Cookies.set("username", result.data.email, {
-      expires: 365,
-      secure: true,
-      sameSite: "strict",
-    });
+      const email = result?.data?.email ?? result?.email;
+      const token = result?.data?.token ?? result?.token;
 
-    Cookies.set("token", result.data.token, {
-      expires: 365,
-      secure: true,
-      sameSite: "strict",
-    });
+      if (!email || !token) return;
 
-    router.push("/");
+      Cookies.set("username", email, { expires: 365 });
+      Cookies.set("token", token, { expires: 365 });
+
+      router.push("/");
+    } catch (err) {
+      // error sudah dihandle redux
+      console.log("Login gagal");
+    }
   };
 
   return (

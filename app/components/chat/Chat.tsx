@@ -250,10 +250,10 @@ function CollapsibleSection({
         className={classNames(
           "section-title",
           "flex w-full items-center justify-between px-3 pb-2 pt-3",
-          "text-xs font-medium uppercase tracking-wide text-gray-500",
+          "text-md font-medium uppercase tracking-wide text-gray-500",
         )}
       >
-        <span>{title}</span>
+        <span className="truncate font-medium text-white">{title}</span>
         <svg
           className={classNames(
             "h-4 w-4 transition-transform",
@@ -301,7 +301,9 @@ function ChatRow({
       <Avatar name={item.name} icon={item.icon} />
       <div className="min-w-0 flex-1 text-left">
         <div className="flex items-center gap-2">
-          <span className="truncate font-medium text-white">{item.name}</span>
+          <span className="truncate font-medium text-sm text-white">
+            {item.name}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <span className="truncate text-sm text-gray-600">
