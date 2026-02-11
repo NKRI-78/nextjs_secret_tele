@@ -8,6 +8,7 @@ import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
 import { BotResult, BotResultSocket } from "@/app/interfaces/botsecret/result";
+import { FaRegCopy, FaCheck } from "react-icons/fa";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
 
@@ -495,6 +496,7 @@ function parseKK(rawText: string): KKParsed {
 // ---------------------------
 // UI pieces
 // ---------------------------
+
 function CopyBadge({
   value,
   label = "Copy",
@@ -503,10 +505,17 @@ function CopyBadge({
   label?: string;
 }) {
   const [done, setDone] = useState(false);
+
   return (
     <button
       type="button"
-      className="ml-2 text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
+      className="
+  ml-2 p-1 rounded
+  bg-white/10 hover:bg-white/20
+  border border-white/20
+  transition-transform
+  hover:scale-110 active:scale-95
+"
       onClick={async (e) => {
         e.stopPropagation();
         try {
@@ -519,7 +528,11 @@ function CopyBadge({
       }}
       title={label}
     >
-      {done ? "Copied" : label}
+      {done ? (
+        <FaCheck size={12} className="text-emerald-400" />
+      ) : (
+        <FaRegCopy size={12} className="text-white/70" />
+      )}
     </button>
   );
 }
@@ -632,7 +645,21 @@ function ResultRecordTable({
           {[...known, ...extras].map((key) => {
             const label = FIELD_LABELS[key] ?? key;
             const val = record[key];
-            const isNIK = key === "NIK" && val;
+            // const isNIK = key === "NIK" && val;
+            const copyableKeys = [
+              "NIK",
+              "NAMA",
+              "NIK IBU",
+              "NAMA IBU",
+              "NIK AYAH",
+              "NAMA AYAH",
+              "KK",
+              "NKK",
+              "NOMOR",
+            ];
+
+            const isCopyable = copyableKeys.includes(key) && val;
+
             return (
               <tr key={key} className="odd:bg-white/0 even:bg-white/5">
                 <td className="w-[34%] px-3 py-2 text-white/80 align-top">
@@ -641,21 +668,39 @@ function ResultRecordTable({
                 <td
                   className={
                     "px-3 py-2 text-white " +
-                    (isNIK ? "whitespace-nowrap" : "break-words")
+                    ([
+                      "NIK",
+                      "NIK IBU",
+                      "NIK AYAH",
+                      "KK",
+                      "NKK",
+                      "NOMOR",
+                    ].includes(key)
+                      ? "whitespace-nowrap"
+                      : "break-words")
                   }
                 >
                   <div className="flex items-center gap-2 min-w-fit">
                     <span
                       className={
-                        (isNIK
+                        ([
+                          "NIK",
+                          "NIK IBU",
+                          "NIK AYAH",
+                          "KK",
+                          "NKK",
+                          "NOMOR",
+                        ].includes(key)
                           ? "font-mono tabular-nums select-all hyphens-none "
-                          : "") + (isNIK ? "font-semibold" : "")
+                          : "") + (key === "NIK" ? "font-semibold" : "")
                       }
                       title={val || "-"}
                     >
                       {val || "-"}
                     </span>
-                    {isNIK && val ? <CopyBadge value={val} /> : null}
+
+                    {/* {isNIK && val ? <CopyBadge value={val} /> : null} */}
+                    {isCopyable ? <CopyBadge value={val} /> : null}
                   </div>
                 </td>
               </tr>
@@ -746,7 +791,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
           <thead className="bg-white/10">
             <tr>
               <th className="px-3 py-2 text-left">NIK</th>
-              <th className="px-3 py-2 text-left">NKK</th>
+              <th className="px-3 py-2 text-left">No KK</th>
               <th className="px-3 py-2 text-left">Nama</th>
               <th className="px-3 py-2 text-left">TTL</th>
               <th className="px-3 py-2 text-left">JK</th>
@@ -770,9 +815,28 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
                   )}
                 </td>
 
-                <td className="px-3 py-2 whitespace-nowrap">{r.NKK || "-"}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {r.NKK ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono tabular-nums">{r.NKK}</span>
+                      <CopyBadge value={r.NKK} />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
 
-                <td className="px-3 py-2">{r.NAMA || "-"}</td>
+                <td className="px-3 py-2">
+                  {r.NAMA ? (
+                    <div className="flex items-center gap-2">
+                      <span>{r.NAMA}</span>
+                      <CopyBadge value={r.NAMA} />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
                 <td className="px-3 py-2">{r.TTL || "-"}</td>
                 <td className="px-3 py-2">{r.JK || "-"}</td>
 
@@ -824,7 +888,7 @@ function KKFamilyTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1300px] text-xs table-auto">
+        <table className="w-full min-w-[1600px] text-xs table-auto">
           <thead className="bg-white/10">
             <tr>
               <th className="px-3 py-2 text-left">NIK</th>
@@ -857,7 +921,17 @@ function KKFamilyTable({
                     {m.NIK ? <CopyBadge value={m.NIK} /> : null}
                   </div>
                 </td>
-                <td className="px-3 py-2">{m.NAMA_LENGKAP || "-"}</td>
+                <td className="px-3 py-2">
+                  {m.NAMA_LENGKAP ? (
+                    <div className="flex items-center gap-2">
+                      <span>{m.NAMA_LENGKAP}</span>
+                      <CopyBadge value={m.NAMA_LENGKAP} />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
                 <td className="px-3 py-2">{m.TTL || "-"}</td>
                 <td className="px-3 py-2">{m.JK || "-"}</td>
                 <td className="px-3 py-2">{m.SHK || "-"}</td>
@@ -879,7 +953,16 @@ function KKFamilyTable({
                     "-"
                   )}
                 </td>
-                <td className="px-3 py-2">{m.NAMA_IBU || "-"}</td>
+                <td className="px-3 py-2">
+                  {m.NAMA_IBU ? (
+                    <div className="flex items-center gap-2">
+                      <span>{m.NAMA_IBU}</span>
+                      <CopyBadge value={m.NAMA_IBU} />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
 
                 <td className="px-3 py-2 whitespace-nowrap">
                   {m.NIK_AYAH ? (
@@ -893,7 +976,16 @@ function KKFamilyTable({
                     "-"
                   )}
                 </td>
-                <td className="px-3 py-2">{m.NAMA_AYAH || "-"}</td>
+                <td className="px-3 py-2 min-w-[180px]">
+                  {m.NAMA_AYAH ? (
+                    <div className="flex items-center gap-2">
+                      <span>{m.NAMA_AYAH}</span>
+                      <CopyBadge value={m.NAMA_AYAH} />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -1121,7 +1213,7 @@ function MessageRow({
     return (
       <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
         <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10">
-          Face Recognition Result
+          Hasil Face Recognition
         </div>
 
         <div className="overflow-x-auto">
@@ -1143,10 +1235,28 @@ function MessageRow({
                   <td className="px-3 py-2 font-semibold text-emerald-300">
                     {r.similarity || "-"}
                   </td>
-                  <td className="px-3 py-2 font-mono w-[125px]">
-                    {r.nik || "-"}
+                  <td className="px-3 py-2 font-mono w-[125px] whitespace-nowrap">
+                    {r.nik ? (
+                      <div className="flex items-center gap-2">
+                        <span className="tabular-nums select-all">{r.nik}</span>
+                        <CopyBadge value={r.nik} />
+                      </div>
+                    ) : (
+                      "-"
+                    )}
                   </td>
-                  <td className="px-3 py-2">{r.nama || "-"}</td>
+
+                  <td className="px-3 py-2">
+                    {r.nama ? (
+                      <div className="flex items-center gap-2">
+                        <span>{r.nama}</span>
+                        <CopyBadge value={r.nama} />
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+
                   <td className="px-3 py-2">{r.ttl || "-"}</td>
                   <td className="px-3 py-2 break-words">{r.alamat || "-"}</td>
                 </tr>
@@ -1172,14 +1282,24 @@ function MessageRow({
         {(showKK || showNIK || showName) && (
           <div className="absolute -top-3 right-2 flex gap-1">
             <button
-              className="text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
+              className="
+  p-1 rounded
+  bg-white/10 hover:bg-white/20
+  border border-white/20
+  transition-transform
+  hover:scale-110 active:scale-95
+"
               onClick={(e) => {
                 e.stopPropagation();
                 copyAllLikeScreenshot();
               }}
               title="Copy all text"
             >
-              {copied ? "Copied" : "Copy"}
+              {copied ? (
+                <FaCheck size={12} className="text-emerald-400" />
+              ) : (
+                <FaRegCopy size={12} className="text-white/70" />
+              )}
             </button>
           </div>
         )}
@@ -1313,6 +1433,8 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
       try {
         const parsed: BotResultSocket = JSON.parse(msg);
         console.log("Received bot_msg via socket:", parsed);
+
+        if ("source_type" in parsed) return;
         if (isIntroText(parsed.result_text)) return;
 
         const dataMsg: BotResult = {
@@ -1324,8 +1446,8 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
           result_from: parsed.result_from,
           result_text: parsed.result_text,
           username: parsed.username,
-          created_at: parsed.created_at,
-          updated_at: parsed.updated_at,
+          created_at: parsed.created_at ?? new Date().toISOString(),
+          updated_at: parsed.updated_at ?? new Date().toISOString(),
         };
 
         // console.log("dataMsg", dataMsg.result_text);
