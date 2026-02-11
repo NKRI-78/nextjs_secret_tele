@@ -26,7 +26,8 @@
       "@contexts/*": ["./app/contexts/*"],
       "@interfaces/*": ["./app/interfaces/*"],
       "@hooks/*": ["./app/hooks/*"]
-    }
+    },
+    "types": ["node"]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]

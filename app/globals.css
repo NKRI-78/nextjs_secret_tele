@@ -194,6 +194,12 @@ p {
   border-radius: 8px;
 }
 
+.react-flow__node {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 @layer base {
   * {
     @apply border-border;
