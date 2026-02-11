@@ -43,8 +43,17 @@ const SearchBar = () => {
       <div className="relative flex items-center h-12 rounded-full bg-white/10 border border-white/20 overflow-hidden">
         <button
           type="button"
-          onClick={openFilePicker}
-          className="h-full px-4 flex items-center justify-center text-white/70 hover:text-white transition shrink-0"
+          onClick={!selectedImage ? openFilePicker : undefined}
+          disabled={!!selectedImage}
+          className={`
+    h-full px-4 flex items-center justify-center
+    shrink-0 transition
+    ${
+      selectedImage
+        ? "text-white/30 cursor-not-allowed"
+        : "text-white/70 hover:text-white"
+    }
+  `}
         >
           <FaPlus size={14} />
         </button>
@@ -55,18 +64,19 @@ const SearchBar = () => {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && submitSearch()}
-            placeholder="Masukan kata dalam pencarian..."
+            placeholder={selectedImage ? "" : "Masukan kata dalam pencarian..."}
             disabled={!!selectedImage}
             className="
-              w-full h-full bg-transparent px-2
-              text-sm text-white placeholder:text-white/40
-              focus:outline-none
-            "
+    w-full h-full bg-transparent px-2
+    text-sm text-white placeholder:text-white/40
+    focus:outline-none
+    disabled:cursor-not-allowed
+  "
           />
 
           {/* IMAGE OVERLAY */}
           {selectedImage && (
-            <div className="absolute inset-0 flex items-center gap-2 px-2">
+            <div className="absolute inset-0 flex items-center gap-2 px-2 bg-cyber/60 backdrop-blur-sm">
               <img
                 src={URL.createObjectURL(selectedImage)}
                 alt="preview"
