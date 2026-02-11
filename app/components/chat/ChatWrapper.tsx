@@ -6,6 +6,7 @@ import Chat from "./Chat";
 import MessageList from "./MessaggeList";
 import MessageListResult from "./MessageListResult";
 import MessageListCompany from "./MessageListCompany";
+import MessageListResultNew from "./MessageListResultNew";
 
 export type ChatItem = {
   id: string;
@@ -14,7 +15,7 @@ export type ChatItem = {
   lastMessage: string;
   time: string;
   command: string;
-  type?: "result" | "profiling" | "nik" | "cekkk" | "perusahaan";
+  type?: "result" | "profiling" | "nik" | "cekkk" | "perusahaan" | "result2";
   placeholder: string;
 };
 
@@ -89,6 +90,16 @@ const INITIAL_CHATS: ChatItem[] = [
     type: "profiling",
     placeholder: "Nama Lengkap",
   },
+  {
+    id: "8",
+    name: "HASIL PENCARIAN New",
+    icon: "",
+    lastMessage: "",
+    time: "00:00",
+    command: "/result",
+    type: "result2",
+    placeholder: "result",
+  },
 ];
 
 export default function ChatWrapper() {
@@ -128,13 +139,14 @@ export default function ChatWrapper() {
         ),
         right: (
           <main className="flex-1 min-h-0 md:h-[100dvh] overflow-hidden">
-            {selected?.type === "result" ? (
+            {/* {selected?.type === "result" ? (
               <MessageListResult selected={selected} />
             ) : selected?.type === "perusahaan" ? (
               <MessageListCompany selected={selected} />
             ) : (
               <MessageList selected={selected} onSubmitSuccess={goToResult} />
-            )}
+            )} */}
+            <MessageListResultNew selected={selected} />
           </main>
         ),
       }}
