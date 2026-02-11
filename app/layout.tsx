@@ -42,16 +42,17 @@ export default function RootLayout({
               {children}
             </div>
           ) : (
-            // <div>{children}</div> //v1
-            <div className="flex h-screen overflow-hidden">
-              <Sidebar />
+            <div>{children}</div>
+            // //v1
+            // <div className="flex h-screen overflow-hidden">
+            //   <Sidebar />
 
-              <div className="flex flex-col flex-1">
-                <Header />
+            //   <div className="flex flex-col flex-1">
+            //     <Header />
 
-                <main>{children}</main>
-              </div>
-            </div>
+            //     <main>{children}</main>
+            //   </div>
+            // </div>
           )}
           <ModalLogout />
         </body>

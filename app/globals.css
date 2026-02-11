@@ -143,8 +143,8 @@ p {
 }
 
 .bg-cyber {
-  /* background-color:#141f33; */
-  background-color: #0e0e10;
+  background-color:#141f33;
+  /* background-color: #0e0e10; */
 }
 
 .bg-chatbot .result-company:hover {
@@ -152,8 +152,8 @@ p {
 }
 
 .bg-cyber-dark {
-  /* background-color: #0f1727; */
-  background-color: #1b1a1f;
+  background-color: #0f1727;
+  /* background-color: #1b1a1f; */
   color: #ffffff;
 }
 
@@ -166,8 +166,8 @@ p {
 }
 
 .bg-chatbot {
-  /* background-color: #213040; */
-  background-color: #0e0e10;
+  background-color: #213040;
+  /* background-color: #0e0e10; */
   border: 0.5px solid #707070;
 }
 
@@ -186,9 +186,9 @@ p {
 
 .section-title {
   padding: 12px;
-  /* background-color: #0c172b; */
+  background-color: #0c172b;
   /* border: 0.5px solid #ffffff; */
-  background-color: #0e0e10;
+  /* background-color: #0e0e10; */
   border: 0.5px solid #707070;
   color: #fff;
   border-radius: 8px;
