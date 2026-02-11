@@ -24,9 +24,11 @@ const ModalLogout: React.FC = () => {
     Cookies.remove("token");
     Cookies.remove("user_id");
 
-    router.push("/auth/login");
+    // router.push("/auth/login");
+    window.location.replace("/auth/login");
 
     dispatch(setShowLogoutModal(false));
+    // router.refresh();
   };
 
   return (
