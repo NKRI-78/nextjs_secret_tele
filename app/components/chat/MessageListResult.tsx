@@ -8,7 +8,7 @@ import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
 import { BotResult, BotResultSocket } from "@/app/interfaces/botsecret/result";
-import { FaRegCopy, FaCheck } from "react-icons/fa";
+import { FaCheck, FaSearch } from "react-icons/fa";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
 
@@ -533,7 +533,7 @@ function CopyBadge({
       {done ? (
         <FaCheck size={12} className="text-emerald-400" />
       ) : (
-        <FaRegCopy size={12} className="text-white/70" />
+        <FaSearch size={12} className="text-white/70" />
       )}
     </button>
   );
@@ -1282,82 +1282,108 @@ function MessageRow({
         style={{ wordBreak: "break-word" }}
       >
         {(showKK || showNIK || showName) && (
-          <div className="absolute -top-3 right-2 flex gap-1">
+          <div className="absolute -top-4 -right-3 flex gap-1">
             <button
+              type="button"
               className="
-  p-1 rounded
-  bg-white/10 hover:bg-white/20
-  border border-white/20
-  transition-transform
-  hover:scale-110 active:scale-95
-"
+    px-2 py-1 text-[11px] rounded-md
+    bg-white/10 hover:bg-white/20
+    border border-white/20
+    transition-all
+    hover:scale-105 active:scale-95
+  "
               onClick={(e) => {
                 e.stopPropagation();
                 copyAllLikeScreenshot();
               }}
-              title="Copy all text"
             >
-              {copied ? (
-                <FaCheck size={12} className="text-emerald-400" />
-              ) : (
-                <FaRegCopy size={12} className="text-white/70" />
-              )}
+              {copied ? "Copied!" : "Copy"}
             </button>
           </div>
         )}
 
         {!showFR && (
           <div ref={captureRef}>
-            {showName ? (
-              <NameResultTable records={nameRecords} />
-            ) : showKK ? (
-              <KKFamilyTable nkk={kk.nkk} area={kk.area} members={kk.members} />
-            ) : showGeneric ? (
-              <div className="space-y-2">
-                {generic.queryPhone ? (
-                  <div className="text-xs text-white/90">
-                    <span className="text-white/70">Phone</span>:{" "}
-                    <span className="font-medium">{generic.queryPhone}</span>
-                  </div>
-                ) : null}
-                {generic.contact ? (
-                  <div className="text-xs text-white/90">
-                    <span className="text-white/70">Contact</span>:{" "}
-                    {generic.contact}
-                  </div>
-                ) : null}
-                {generic.regData ? (
-                  <div className="text-xs text-white/90">
-                    <span className="text-white/70">Reg Data</span>:{" "}
-                    {generic.regData}
-                  </div>
-                ) : null}
-                {generic.wallets ? (
-                  <WalletTable wallets={generic.wallets} />
-                ) : null}
-                {generic.people.length > 0 ? (
-                  <div className="mt-2">
-                    {generic.people.map((p, idx) => (
-                      <PersonRecordTable key={idx} person={p} index={idx} />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : showNIK ? (
-              <ParsedResult records={nikRecords} />
+            {isMe ? (
+              msg.result_text && msg.result_text.trim() !== "" ? (
+                <div className="whitespace-pre-wrap">{msg.result_text}</div>
+              ) : msg.file_url ? (
+                <img
+                  src={msg.file_url}
+                  alt="User Upload"
+                  className="
+    w-auto
+    max-w-[300px]
+    max-h-[300px]
+    object-contain
+    rounded-lg
+    shadow-lg
+  "
+                  onLoad={scrollSmart}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : null
             ) : (
-              <div className="whitespace-pre-wrap">{msg.result_text}</div>
-            )}
+              <>
+                {showName ? (
+                  <NameResultTable records={nameRecords} />
+                ) : showKK ? (
+                  <KKFamilyTable
+                    nkk={kk.nkk}
+                    area={kk.area}
+                    members={kk.members}
+                  />
+                ) : showGeneric ? (
+                  <div className="space-y-2">
+                    {generic.queryPhone ? (
+                      <div className="text-xs text-white/90">
+                        <span className="text-white/70">Phone</span>:{" "}
+                        <span className="font-medium">
+                          {generic.queryPhone}
+                        </span>
+                      </div>
+                    ) : null}
+                    {generic.contact ? (
+                      <div className="text-xs text-white/90">
+                        <span className="text-white/70">Contact</span>:{" "}
+                        {generic.contact}
+                      </div>
+                    ) : null}
+                    {generic.regData ? (
+                      <div className="text-xs text-white/90">
+                        <span className="text-white/70">Reg Data</span>:{" "}
+                        {generic.regData}
+                      </div>
+                    ) : null}
+                    {generic.wallets ? (
+                      <WalletTable wallets={generic.wallets} />
+                    ) : null}
+                    {generic.people.length > 0 ? (
+                      <div className="mt-2">
+                        {generic.people.map((p, idx) => (
+                          <PersonRecordTable key={idx} person={p} index={idx} />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : showNIK ? (
+                  <ParsedResult records={nikRecords} />
+                ) : (
+                  <div className="whitespace-pre-wrap">{msg.result_text}</div>
+                )}
 
-            {msg.mime_type === "image/jpeg" && (
-              <img
-                key={msg.file_url}
-                src={`${msg.file_url}`}
-                alt="Preview"
-                className="max-w-full rounded-lg shadow-lg mt-2"
-                onLoad={scrollSmart}
-                onClick={(e) => e.stopPropagation()}
-              />
+                {/* fallback image untuk bot */}
+                {msg.mime_type === "image/jpeg" && msg.file_url && (
+                  <img
+                    key={msg.file_url}
+                    src={msg.file_url}
+                    alt="Preview"
+                    className="max-w-full rounded-lg shadow-lg mt-2"
+                    onLoad={scrollSmart}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
+              </>
             )}
           </div>
         )}
@@ -1551,9 +1577,9 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
               if (shouldHideMessage(msg, i, arr)) return false;
               // if (isHiddenText(msg.result_text)) return false;
 
-              if (!hasText && msg.mime_type !== "image/jpeg") {
-                return false;
-              }
+              // if (!hasText && msg.mime_type !== "image/jpeg") {
+              //   return false;
+              // }
 
               if (hasText && isHiddenText(msg.result_text)) {
                 return false;
@@ -1571,7 +1597,8 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
             })
             /* IMPORTANT: no sort here—use state order */
             .map((msg, i) => {
-              const isMe = msg.username === username;
+              const isMe = msg.result_from === "USER";
+
               if (
                 msg.result_text?.includes("Mengirim permintaan") &&
                 i !== messages.length - 1
