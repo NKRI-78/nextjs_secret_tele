@@ -39,7 +39,9 @@ function isHiddenText(text?: string | null): boolean {
     s.includes("silakan pilih dan kirim foto dari galeri anda") ||
     s.includes("mengirim") ||
     s.includes("akses cp digunakan sebanyak 3 kali hari ini. tunggu proses") ||
-    s.includes("has been sent, don't spam.")
+    s.includes("has been sent, don't spam.") ||
+    s.includes("format command salah") ||
+    s.includes("terima kasih atas pesannya")
   );
 }
 
@@ -1349,6 +1351,7 @@ function MessageRow({
 
             {msg.mime_type === "image/jpeg" && (
               <img
+                key={msg.file_url}
                 src={`${msg.file_url}`}
                 alt="Preview"
                 className="max-w-full rounded-lg shadow-lg mt-2"
@@ -1437,6 +1440,12 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         if ("source_type" in parsed) return;
         if (isIntroText(parsed.result_text)) return;
 
+        // ✅ TAMBAHKAN DI SINI
+        if (parsed.mime_type?.toLowerCase().startsWith("image")) {
+          dispatch(chatMessageListResultAsync());
+          return; // stop supaya tidak dobel append
+        }
+
         const dataMsg: BotResult = {
           id: parsed.id,
           chat_id: parsed.chat_id,
@@ -1464,7 +1473,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
     return () => {
       socket.off("bot_msg", handler);
     };
-  }, []);
+  }, [dispatch]);
 
   const scrollSmart = useCallback(() => {
     const el = listRef.current;
@@ -1535,8 +1544,16 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
             // )
             .filter((msg, i, arr) => {
               // tetap tampilkan image
-              // if (msg.mime_type === "image/jpeg") return true;
               const hasText = msg.result_text && msg.result_text.trim() !== "";
+              // if (msg.mime_type === "image/jpeg") return true;
+
+              // helper filter
+              if (shouldHideMessage(msg, i, arr)) return false;
+              // if (isHiddenText(msg.result_text)) return false;
+
+              if (!hasText && msg.mime_type !== "image/jpeg") {
+                return false;
+              }
 
               if (hasText && isHiddenText(msg.result_text)) {
                 return false;
@@ -1549,10 +1566,6 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
               if (hasText) {
                 return true;
               }
-
-              // helper filter
-              if (shouldHideMessage(msg, i, arr)) return false;
-              // if (isHiddenText(msg.result_text)) return false;
 
               return true;
             })
