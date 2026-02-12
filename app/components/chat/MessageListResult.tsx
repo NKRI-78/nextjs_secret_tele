@@ -1,6 +1,9 @@
 "use client";
 
-import { chatMessageListResultAsync } from "@/redux/slices/chatSlice";
+import {
+  chatMessageListResultAsync,
+  sendCommandAsync,
+} from "@/redux/slices/chatSlice";
 import type { AppDispatch, RootState } from "@redux/store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -499,36 +502,52 @@ function parseKK(rawText: string): KKParsed {
 // UI pieces
 // ---------------------------
 
-function CopyBadge({
-  value,
-  label = "Copy",
-}: {
-  value: string;
-  label?: string;
-}) {
+const COMMAND_BY_KEY: Record<string, string> = {
+  NIK: "/nik",
+  "NIK IBU": "/nik",
+  "NIK AYAH": "/nik",
+  NKK: "/kk",
+  KK: "/kk",
+  NAMA: "/name",
+  "NAMA IBU": "/name",
+  "NAMA AYAH": "/name",
+  PHONE: "/reg",
+};
+
+function CopyBadge({ value, fieldKey }: { value: string; fieldKey?: string }) {
+  const dispatch = useDispatch<AppDispatch>();
   const [done, setDone] = useState(false);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setDone(true);
+      setTimeout(() => setDone(false), 1200);
+    } catch {
+      console.log("Copy error");
+    }
+
+    // 🔥 Trigger API berdasarkan fieldKey
+    if (fieldKey) {
+      const command = COMMAND_BY_KEY[fieldKey.toUpperCase()];
+      if (command) {
+        dispatch(
+          sendCommandAsync({
+            command,
+            value: value.trim(),
+          }),
+        );
+      }
+    }
+  };
 
   return (
     <button
       type="button"
-      className="
-  ml-2 p-1 rounded
-  bg-white/10 hover:bg-white/20
-  border border-white/20
-  transition-transform
-  hover:scale-110 active:scale-95
-"
-      onClick={async (e) => {
-        e.stopPropagation();
-        try {
-          await navigator.clipboard.writeText(value);
-          setDone(true);
-          setTimeout(() => setDone(false), 1200);
-        } catch {
-          console.log("Error");
-        }
-      }}
-      title={label}
+      className="ml-2 p-1 rounded bg-white/10 hover:bg-white/20 border border-white/20 transition-transform hover:scale-110 active:scale-95"
+      onClick={handleClick}
     >
       {done ? (
         <FaCheck size={12} className="text-emerald-400" />
@@ -701,8 +720,9 @@ function ResultRecordTable({
                       {val || "-"}
                     </span>
 
-                    {/* {isNIK && val ? <CopyBadge value={val} /> : null} */}
-                    {isCopyable ? <CopyBadge value={val} /> : null}
+                    {isCopyable ? (
+                      <CopyBadge value={val} fieldKey={key} />
+                    ) : null}
                   </div>
                 </td>
               </tr>
@@ -810,7 +830,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
                   {r.NIK ? (
                     <div className="flex items-center gap-2">
                       <span className="font-mono tabular-nums">{r.NIK}</span>
-                      <CopyBadge value={r.NIK} />
+                      <CopyBadge value={r.NIK} fieldKey="NIK" />
                     </div>
                   ) : (
                     "-"
@@ -821,7 +841,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
                   {r.NKK ? (
                     <div className="flex items-center gap-2">
                       <span className="font-mono tabular-nums">{r.NKK}</span>
-                      <CopyBadge value={r.NKK} />
+                      <CopyBadge value={r.NKK} fieldKey="NKK" />
                     </div>
                   ) : (
                     "-"
@@ -832,7 +852,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
                   {r.NAMA ? (
                     <div className="flex items-center gap-2">
                       <span>{r.NAMA}</span>
-                      <CopyBadge value={r.NAMA} />
+                      <CopyBadge value={r.NAMA} fieldKey="NAMA" />
                     </div>
                   ) : (
                     "-"
@@ -876,7 +896,7 @@ function KKFamilyTable({
           {nkk ? (
             <div className="text-[11px] mt-1">
               NKK: <span className="font-medium">{nkk}</span>{" "}
-              <CopyBadge value={nkk} />
+              <CopyBadge value={nkk} fieldKey="NKK" />
             </div>
           ) : null}
         </div>
@@ -920,14 +940,14 @@ function KKFamilyTable({
                     >
                       {m.NIK || "-"}
                     </span>
-                    {m.NIK ? <CopyBadge value={m.NIK} /> : null}
+                    {m.NIK ? <CopyBadge value={m.NIK} fieldKey="NIK" /> : null}
                   </div>
                 </td>
                 <td className="px-3 py-2">
                   {m.NAMA_LENGKAP ? (
                     <div className="flex items-center gap-2">
                       <span>{m.NAMA_LENGKAP}</span>
-                      <CopyBadge value={m.NAMA_LENGKAP} />
+                      <CopyBadge value={m.NAMA_LENGKAP} fieldKey="NAMA" />
                     </div>
                   ) : (
                     "-"
@@ -949,7 +969,7 @@ function KKFamilyTable({
                       <span className="font-mono tabular-nums">
                         {m.NIK_IBU}
                       </span>
-                      <CopyBadge value={m.NIK_IBU} label="Copy" />
+                      <CopyBadge value={m.NIK_IBU} fieldKey="NIK IBU" />
                     </div>
                   ) : (
                     "-"
@@ -959,7 +979,7 @@ function KKFamilyTable({
                   {m.NAMA_IBU ? (
                     <div className="flex items-center gap-2">
                       <span>{m.NAMA_IBU}</span>
-                      <CopyBadge value={m.NAMA_IBU} />
+                      <CopyBadge value={m.NAMA_IBU} fieldKey="NAMA IBU" />
                     </div>
                   ) : (
                     "-"
@@ -972,7 +992,7 @@ function KKFamilyTable({
                       <span className="font-mono tabular-nums">
                         {m.NIK_AYAH}
                       </span>
-                      <CopyBadge value={m.NIK_AYAH} label="Copy" />
+                      <CopyBadge value={m.NIK_AYAH} fieldKey="NIK AYAH" />
                     </div>
                   ) : (
                     "-"
@@ -982,7 +1002,7 @@ function KKFamilyTable({
                   {m.NAMA_AYAH ? (
                     <div className="flex items-center gap-2">
                       <span>{m.NAMA_AYAH}</span>
-                      <CopyBadge value={m.NAMA_AYAH} />
+                      <CopyBadge value={m.NAMA_AYAH} fieldKey="NAMA AYAH" />
                     </div>
                   ) : (
                     "-"
@@ -1241,7 +1261,7 @@ function MessageRow({
                     {r.nik ? (
                       <div className="flex items-center gap-2">
                         <span className="tabular-nums select-all">{r.nik}</span>
-                        <CopyBadge value={r.nik} />
+                        <CopyBadge value={r.nik} fieldKey="NIK" />
                       </div>
                     ) : (
                       "-"
@@ -1252,7 +1272,7 @@ function MessageRow({
                     {r.nama ? (
                       <div className="flex items-center gap-2">
                         <span>{r.nama}</span>
-                        <CopyBadge value={r.nama} />
+                        <CopyBadge value={r.nama} fieldKey="NAMA" />
                       </div>
                     ) : (
                       "-"
@@ -1375,7 +1395,7 @@ function MessageRow({
                 {/* fallback image untuk bot */}
                 {msg.mime_type === "image/jpeg" && msg.file_url && (
                   <img
-                    key={msg.file_url}
+                    // key={msg.file_url}
                     src={msg.file_url}
                     alt="Preview"
                     className="max-w-full rounded-lg shadow-lg mt-2"

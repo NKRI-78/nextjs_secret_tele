@@ -15,7 +15,7 @@ export const chatMessageListAsync = createAsyncThunk(
   async () => {
     const response = await ChatMessageList();
     return response;
-  }
+  },
 );
 
 export const chatMessageListResultAsync = createAsyncThunk(
@@ -23,7 +23,7 @@ export const chatMessageListResultAsync = createAsyncThunk(
   async () => {
     const response = await ChatMessageListResult();
     return response;
-  }
+  },
 );
 
 export const chatMessageListCompanyAsync = createAsyncThunk<
@@ -38,14 +38,32 @@ export const sendMsgButtonAsync = createAsyncThunk(
   "chat/button/send",
   async ({ formData: FormData }: { formData: FormData }) => {
     await SendMessageBtn(FormData);
-  }
+  },
 );
 
 export const sendMsgAsync = createAsyncThunk(
   "chat/send",
   async ({ formData: FormData }: { formData: FormData }) => {
     return await SendMessage(FormData);
-  }
+  },
+);
+
+export const sendCommandAsync = createAsyncThunk(
+  "chat/sendCommand",
+  async (
+    { command, value }: { command: string; value: string },
+    { dispatch },
+  ) => {
+    const formData = new FormData();
+    formData.append("chat", "AnakAsuhanRembolan_iBot");
+    formData.append("message", `${command} ${value}`);
+
+    await SendMessage(formData);
+
+    dispatch(chatMessageListResultAsync());
+
+    return { command, value };
+  },
 );
 
 interface ChatState {
@@ -80,6 +98,19 @@ const chatSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
+      .addCase(sendCommandAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(sendCommandAsync.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(sendCommandAsync.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || "Failed to send command";
+      });
+
+    builder
       .addCase(chatMessageListAsync.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -89,7 +120,7 @@ const chatSlice = createSlice({
         (state, action: PayloadAction<ChatMessage[]>) => {
           state.message = action.payload;
           state.loading = false;
-        }
+        },
       )
       .addCase(chatMessageListAsync.rejected, (state, action) => {
         state.loading = false;
@@ -106,7 +137,7 @@ const chatSlice = createSlice({
         (state, action: PayloadAction<BotResult[]>) => {
           state.result = action.payload;
           state.loading = false;
-        }
+        },
       )
       .addCase(chatMessageListResultAsync.rejected, (state, action) => {
         state.loading = false;
@@ -123,7 +154,7 @@ const chatSlice = createSlice({
         (state, action: PayloadAction<CompanyDoc[]>) => {
           state.company = action.payload; // <-- store companies
           state.loading = false;
-        }
+        },
       )
       .addCase(chatMessageListCompanyAsync.rejected, (state, action) => {
         state.loading = false;
