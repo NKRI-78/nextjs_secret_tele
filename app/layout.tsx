@@ -9,6 +9,8 @@ import { Provider } from "react-redux";
 import localFont from "next/font/local";
 
 import ModalLogout from "@components/modal/logout/Logout";
+import Sidebar from "./components/v2/sidebar/Sidebar";
+import Header from "./components/v2/header/Header";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -41,6 +43,16 @@ export default function RootLayout({
             </div>
           ) : (
             <div>{children}</div>
+            // //v1
+            // <div className="flex h-screen overflow-hidden">
+            //   <Sidebar />
+
+            //   <div className="flex flex-col flex-1">
+            //     <Header />
+
+            //     <main>{children}</main>
+            //   </div>
+            // </div>
           )}
           <ModalLogout />
         </body>

@@ -14,7 +14,7 @@ export type ChatItem = {
   lastMessage: string;
   time: string;
   command: string;
-  type?: "result" | "profiling" | "nik" | "cekkk" | "perusahaan";
+  type?: "result" | "profiling" | "nik" | "cekkk" | "perusahaan" | "result2";
   placeholder: string;
 };
 
@@ -28,6 +28,16 @@ const INITIAL_CHATS: ChatItem[] = [
     command: "/result",
     type: "result",
     placeholder: "result",
+  },
+  {
+    id: "7",
+    name: "Nama Lengkap",
+    icon: "/images/name.png",
+    lastMessage: "",
+    time: "00:00",
+    command: "/name",
+    type: "profiling",
+    placeholder: "Nama Lengkap",
   },
   {
     id: "2",
@@ -79,16 +89,6 @@ const INITIAL_CHATS: ChatItem[] = [
     type: "profiling",
     placeholder: "Face Recognition",
   },
-  {
-    id: "7",
-    name: "Nama Lengkap",
-    icon: "/images/name.png",
-    lastMessage: "",
-    time: "00:00",
-    command: "/name",
-    type: "profiling",
-    placeholder: "Nama Lengkap",
-  },
 ];
 
 export default function ChatWrapper() {
@@ -110,10 +110,11 @@ export default function ChatWrapper() {
       title="Bot"
       leftLabel="Chats"
       className="bg-gray-100"
-      leftWidthMd="md:w-[340px] lg:w-[380px]"
+      // leftWidthMd="md:w-[340px] lg:w-[380px]"
+      leftWidthMd="md:w-[260px] lg:w-[280px]"
     >
       {{
-        left: (
+        left: ({ closeSidebar }) => (
           <div
             className="w-full bg-cyber h-[100dvh] overflow-y-auto"
             aria-label="Chat list"
@@ -121,10 +122,14 @@ export default function ChatWrapper() {
             <Chat
               items={items}
               selectedId={selectedId}
-              onSelect={(item) => setSelectedId(item.id)}
+              onSelect={(item) => {
+                setSelectedId(item.id);
+                closeSidebar();
+              }}
             />
           </div>
         ),
+
         right: (
           <main className="flex-1 min-h-0 md:h-[100dvh] overflow-hidden">
             {selected?.type === "result" ? (

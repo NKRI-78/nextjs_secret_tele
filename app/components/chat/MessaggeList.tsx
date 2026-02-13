@@ -264,35 +264,69 @@ const MessageList = ({
             </h1>
 
             {/* Composer di tengah */}
-            <div className="mx-auto max-w-3xl w-full flex items-center gap-3">
+            <div className="mx-auto max-w-3xl w-full">
+              {/* ===== MODE NORMAL ===== */}
               {!isFR && (
-                <input
-                  type={isNumericInput ? "tel" : "text"}
-                  inputMode={isNumericInput ? "numeric" : "text"}
-                  value={input}
-                  onChange={(e) => {
-                    const value = isNumericInput
-                      ? e.target.value.replace(/\D/g, "")
-                      : e.target.value;
+                <div className="w-full flex items-center gap-3">
+                  <input
+                    type={isNumericInput ? "tel" : "text"}
+                    inputMode={isNumericInput ? "numeric" : "text"}
+                    value={input}
+                    onChange={(e) => {
+                      const value = isNumericInput
+                        ? e.target.value.replace(/\D/g, "")
+                        : e.target.value;
+                      setInput(value);
+                    }}
+                    onKeyDown={(e) =>
+                      !sendingMessage && e.key === "Enter" && handleSubmit()
+                    }
+                    disabled={sendingMessage || !selected}
+                    className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    placeholder={
+                      !selected
+                        ? "Select a chat"
+                        : sendingMessage
+                          ? "Sending..."
+                          : `${selected.placeholder}`
+                    }
+                  />
 
-                    setInput(value);
-                  }}
-                  onKeyDown={(e) =>
-                    !sendingMessage && e.key === "Enter" && handleSubmit()
-                  }
-                  disabled={sendingMessage || !selected}
-                  className="flex-1 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm shadow-sm focus:ring focus:ring-blue-300 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                  placeholder={
-                    !selected
-                      ? "Select a chat"
-                      : sendingMessage
-                        ? "Sending..."
-                        : `${selected.placeholder}`
-                  }
-                />
+                  <button
+                    onClick={handleSubmit}
+                    disabled={sendingMessage || !selected}
+                    className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
+                  >
+                    {sendingMessage ? (
+                      <svg
+                        className="h-5 w-5 animate-spin"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                      </svg>
+                    ) : (
+                      "➤"
+                    )}
+                  </button>
+                </div>
               )}
+
+              {/* ===== MODE FACE RECOGNITION ===== */}
               {isFR && (
-                <>
+                <div className="w-full flex flex-col gap-3">
                   <input
                     type="file"
                     accept="image/*"
@@ -308,48 +342,56 @@ const MessageList = ({
                     disabled={sendingMessage}
                   />
 
-                  <label
-                    htmlFor="fr-upload"
-                    className="flex-1 cursor-pointer rounded-full border border-dashed border-white/60 bg-white/10 px-4 py-3 text-sm text-white text-center hover:bg-white/20 transition"
-                  >
-                    {uploadedFile ? uploadedFile.name : "Upload foto wajah"}
-                  </label>
-                </>
-              )}
+                  {previewUrl && (
+                    <div className="w-full flex justify-center">
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="max-h-[250px] rounded-xl shadow-lg border border-white/20"
+                      />
+                    </div>
+                  )}
 
-              <button
-                onClick={handleSubmit}
-                disabled={
-                  sendingMessage || !selected || (isFR && !uploadedFile)
-                }
-                className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
-              >
-                {" "}
-                {sendingMessage ? (
-                  <svg
-                    className="h-5 w-5 animate-spin"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                  >
-                    {" "}
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />{" "}
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />{" "}
-                  </svg>
-                ) : (
-                  "➤"
-                )}{" "}
-              </button>
+                  <div className="w-full flex items-center gap-3">
+                    <label
+                      htmlFor="fr-upload"
+                      className="flex-1 cursor-pointer rounded-full border border-dashed border-white/60 bg-white/10 px-4 py-3 text-sm text-white text-center hover:bg-white/20 transition"
+                    >
+                      {uploadedFile ? uploadedFile.name : "Upload foto wajah"}
+                    </label>
+
+                    <button
+                      onClick={handleSubmit}
+                      disabled={sendingMessage || !selected || !uploadedFile}
+                      className="h-10 w-10 flex items-center justify-center rounded-full bg-white/20 backdrop-blur-md text-white disabled:opacity-50 hover:scale-105 transition"
+                    >
+                      {sendingMessage ? (
+                        <svg
+                          className="h-5 w-5 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          />
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                          />
+                        </svg>
+                      ) : (
+                        "➤"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

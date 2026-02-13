@@ -1,6 +1,9 @@
 "use client";
 
-import { chatMessageListResultAsync } from "@/redux/slices/chatSlice";
+import {
+  chatMessageListResultAsync,
+  sendCommandAsync,
+} from "@/redux/slices/chatSlice";
 import type { AppDispatch, RootState } from "@redux/store";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
@@ -8,6 +11,7 @@ import { io, Socket } from "socket.io-client";
 import Settings from "../settings/Settings";
 import { ChatItem } from "./ChatWrapper";
 import { BotResult, BotResultSocket } from "@/app/interfaces/botsecret/result";
+import { FaCheck, FaSearch } from "react-icons/fa";
 
 const socket: Socket = io(process.env.NEXT_PUBLIC_BASE_URL_SOCKET as string);
 
@@ -20,6 +24,35 @@ function isIntroText(text?: string | null): boolean {
   if (/^\/start\b/i.test(s)) return true;
   if (/akses\s+track\s+bts/i.test(s)) return true;
   return false;
+}
+
+function isHiddenText(text?: string | null): boolean {
+  if (!text) return false;
+
+  const s = text.replace(/\s+/g, " ").trim().toLowerCase();
+
+  const hiddenKeywords = [
+    "foto fr berhasil dikirim!",
+    "pastikan struktur wajah terang dan jelas",
+    "please wait",
+    "foto fr v1 diterima!",
+    "pesan berhasil dikirim.",
+    "pilih fitur:",
+    "on proses",
+    "silakan pilih dan kirim foto dari galeri anda",
+    "mengirim",
+    "akses cp digunakan sebanyak 1 kali hari ini. tunggu proses",
+    "akses cp digunakan sebanyak 2 kali hari ini. tunggu proses",
+    "akses cp digunakan sebanyak 3 kali hari ini. tunggu proses",
+    "akses cp digunakan sebanyak 4 kali hari ini. tunggu proses",
+    "has been sent, don't spam.",
+    "format command salah",
+    "terima kasih atas pesannya",
+    "userbot aktif otomatis",
+    // "server maintenance",
+  ];
+
+  return hiddenKeywords.some((keyword) => s.includes(keyword));
 }
 
 // ---------------------------
@@ -475,31 +508,73 @@ function parseKK(rawText: string): KKParsed {
 // ---------------------------
 // UI pieces
 // ---------------------------
-function CopyBadge({
-  value,
-  label = "Copy",
-}: {
-  value: string;
-  label?: string;
-}) {
+
+const COMMAND_BY_KEY: Record<string, string> = {
+  NIK: "/nik",
+  "NIK IBU": "/nik",
+  "NIK AYAH": "/nik",
+  NKK: "/kk",
+  KK: "/kk",
+  NAMA: "/name",
+  "NAMA IBU": "/name",
+  "NAMA AYAH": "/name",
+  PHONE: "/reg",
+};
+
+function isValidSearchValue(val?: string | null): boolean {
+  if (!val) return false;
+
+  const v = val.trim();
+
+  if (!v) return false;
+  if (v === "-") return false;
+  if (v === "0") return false;
+  if (/^0+$/.test(v)) return false;
+  if (/^-+$/.test(v)) return false;
+
+  return true;
+}
+
+function CopyBadge({ value, fieldKey }: { value: string; fieldKey?: string }) {
+  const dispatch = useDispatch<AppDispatch>();
   const [done, setDone] = useState(false);
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setDone(true);
+      setTimeout(() => setDone(false), 1200);
+    } catch {
+      console.log("Copy error");
+    }
+
+    // 🔥 Trigger API berdasarkan fieldKey
+    if (fieldKey && isValidSearchValue(value)) {
+      const command = COMMAND_BY_KEY[fieldKey.toUpperCase()];
+      if (command) {
+        dispatch(
+          sendCommandAsync({
+            command,
+            value: value.trim(),
+          }),
+        );
+      }
+    }
+  };
+
   return (
     <button
       type="button"
-      className="ml-2 text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
-      onClick={async (e) => {
-        e.stopPropagation();
-        try {
-          await navigator.clipboard.writeText(value);
-          setDone(true);
-          setTimeout(() => setDone(false), 1200);
-        } catch {
-          console.log("Error");
-        }
-      }}
-      title={label}
+      className="ml-2 p-1 rounded bg-white/10 hover:bg-white/20 border border-white/20 transition-transform hover:scale-110 active:scale-95"
+      onClick={handleClick}
     >
-      {done ? "Copied" : label}
+      {done ? (
+        <FaCheck size={12} className="text-emerald-400" />
+      ) : (
+        <FaSearch size={12} className="text-white/70" />
+      )}
     </button>
   );
 }
@@ -612,7 +687,22 @@ function ResultRecordTable({
           {[...known, ...extras].map((key) => {
             const label = FIELD_LABELS[key] ?? key;
             const val = record[key];
-            const isNIK = key === "NIK" && val;
+            // const isNIK = key === "NIK" && val;
+            const copyableKeys = [
+              "NIK",
+              "NAMA",
+              "NIK IBU",
+              "NAMA IBU",
+              "NIK AYAH",
+              "NAMA AYAH",
+              "KK",
+              "NKK",
+              "NOMOR",
+            ];
+
+            const isCopyable =
+              copyableKeys.includes(key) && isValidSearchValue(val);
+
             return (
               <tr key={key} className="odd:bg-white/0 even:bg-white/5">
                 <td className="w-[34%] px-3 py-2 text-white/80 align-top">
@@ -621,21 +711,40 @@ function ResultRecordTable({
                 <td
                   className={
                     "px-3 py-2 text-white " +
-                    (isNIK ? "whitespace-nowrap" : "break-words")
+                    ([
+                      "NIK",
+                      "NIK IBU",
+                      "NIK AYAH",
+                      "KK",
+                      "NKK",
+                      "NOMOR",
+                    ].includes(key)
+                      ? "whitespace-nowrap"
+                      : "break-words")
                   }
                 >
                   <div className="flex items-center gap-2 min-w-fit">
                     <span
                       className={
-                        (isNIK
+                        ([
+                          "NIK",
+                          "NIK IBU",
+                          "NIK AYAH",
+                          "KK",
+                          "NKK",
+                          "NOMOR",
+                        ].includes(key)
                           ? "font-mono tabular-nums select-all hyphens-none "
-                          : "") + (isNIK ? "font-semibold" : "")
+                          : "") + (key === "NIK" ? "font-semibold" : "")
                       }
                       title={val || "-"}
                     >
                       {val || "-"}
                     </span>
-                    {isNIK && val ? <CopyBadge value={val} /> : null}
+
+                    {isCopyable ? (
+                      <CopyBadge value={val} fieldKey={key} />
+                    ) : null}
                   </div>
                 </td>
               </tr>
@@ -726,7 +835,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
           <thead className="bg-white/10">
             <tr>
               <th className="px-3 py-2 text-left">NIK</th>
-              <th className="px-3 py-2 text-left">NKK</th>
+              <th className="px-3 py-2 text-left">No KK</th>
               <th className="px-3 py-2 text-left">Nama</th>
               <th className="px-3 py-2 text-left">TTL</th>
               <th className="px-3 py-2 text-left">JK</th>
@@ -740,19 +849,38 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
             {records.map((r, i) => (
               <tr key={r.NIK || i} className="odd:bg-white/0 even:bg-white/5">
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {r.NIK ? (
+                  {isValidSearchValue(r.NIK) ? (
                     <div className="flex items-center gap-2">
                       <span className="font-mono tabular-nums">{r.NIK}</span>
-                      <CopyBadge value={r.NIK} />
+                      <CopyBadge value={r.NIK} fieldKey="NIK" />
                     </div>
                   ) : (
                     "-"
                   )}
                 </td>
 
-                <td className="px-3 py-2 whitespace-nowrap">{r.NKK || "-"}</td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  {isValidSearchValue(r.NKK) ? (
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono tabular-nums">{r.NKK}</span>
+                      <CopyBadge value={r.NKK} fieldKey="NKK" />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
 
-                <td className="px-3 py-2">{r.NAMA || "-"}</td>
+                <td className="px-3 py-2">
+                  {isValidSearchValue(r.NAMA) ? (
+                    <div className="flex items-center gap-2">
+                      <span>{r.NAMA}</span>
+                      <CopyBadge value={r.NAMA} fieldKey="NAMA" />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
                 <td className="px-3 py-2">{r.TTL || "-"}</td>
                 <td className="px-3 py-2">{r.JK || "-"}</td>
 
@@ -787,10 +915,10 @@ function KKFamilyTable({
       <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10 flex items-center justify-between">
         <div>
           <div className="font-semibold">Kartu Keluarga</div>
-          {nkk ? (
+          {isValidSearchValue(nkk) ? (
             <div className="text-[11px] mt-1">
               NKK: <span className="font-medium">{nkk}</span>{" "}
-              <CopyBadge value={nkk} />
+              <CopyBadge value={nkk!} fieldKey="NKK" />
             </div>
           ) : null}
         </div>
@@ -804,7 +932,7 @@ function KKFamilyTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1300px] text-xs table-auto">
+        <table className="w-full min-w-[1600px] text-xs table-auto">
           <thead className="bg-white/10">
             <tr>
               <th className="px-3 py-2 text-left">NIK</th>
@@ -834,10 +962,22 @@ function KKFamilyTable({
                     >
                       {m.NIK || "-"}
                     </span>
-                    {m.NIK ? <CopyBadge value={m.NIK} /> : null}
+                    {isValidSearchValue(m.NIK) ? (
+                      <CopyBadge value={m.NIK!} fieldKey="NIK" />
+                    ) : null}
                   </div>
                 </td>
-                <td className="px-3 py-2">{m.NAMA_LENGKAP || "-"}</td>
+                <td className="px-3 py-2">
+                  {isValidSearchValue(m.NAMA_LENGKAP) ? (
+                    <div className="flex items-center gap-2">
+                      <span>{m.NAMA_LENGKAP}</span>
+                      <CopyBadge value={m.NAMA_LENGKAP!} fieldKey="NAMA" />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
+
                 <td className="px-3 py-2">{m.TTL || "-"}</td>
                 <td className="px-3 py-2">{m.JK || "-"}</td>
                 <td className="px-3 py-2">{m.SHK || "-"}</td>
@@ -848,32 +988,50 @@ function KKFamilyTable({
                 <td className="px-3 py-2">{m.PEKERJAAN || "-"}</td>
 
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {m.NIK_IBU ? (
+                  {isValidSearchValue(m.NIK_IBU) ? (
                     <div className="flex items-center gap-2 min-w-fit">
                       <span className="font-mono tabular-nums">
                         {m.NIK_IBU}
                       </span>
-                      <CopyBadge value={m.NIK_IBU} label="Copy" />
+                      <CopyBadge value={m.NIK_IBU!} fieldKey="NIK IBU" />
                     </div>
                   ) : (
                     "-"
                   )}
                 </td>
-                <td className="px-3 py-2">{m.NAMA_IBU || "-"}</td>
+                <td className="px-3 py-2">
+                  {isValidSearchValue(m.NAMA_IBU) ? (
+                    <div className="flex items-center gap-2">
+                      <span>{m.NAMA_IBU}</span>
+                      <CopyBadge value={m.NAMA_IBU!} fieldKey="NAMA IBU" />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
 
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {m.NIK_AYAH ? (
+                  {isValidSearchValue(m.NIK_AYAH) ? (
                     <div className="flex items-center gap-2 min-w-fit">
                       <span className="font-mono tabular-nums">
                         {m.NIK_AYAH}
                       </span>
-                      <CopyBadge value={m.NIK_AYAH} label="Copy" />
+                      <CopyBadge value={m.NIK_AYAH!} fieldKey="NIK AYAH" />
                     </div>
                   ) : (
                     "-"
                   )}
                 </td>
-                <td className="px-3 py-2">{m.NAMA_AYAH || "-"}</td>
+                <td className="px-3 py-2 min-w-[180px]">
+                  {isValidSearchValue(m.NAMA_AYAH) ? (
+                    <div className="flex items-center gap-2">
+                      <span>{m.NAMA_AYAH}</span>
+                      <CopyBadge value={m.NAMA_AYAH!} fieldKey="NAMA AYAH" />
+                    </div>
+                  ) : (
+                    "-"
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -1010,6 +1168,18 @@ function buildExportText({
   return stripCodeFence(raw || "");
 }
 
+function normalizeServerText(text?: string | null): string {
+  if (!text) return "";
+
+  const lower = text.toLowerCase();
+
+  if (lower.includes("server maintenance")) {
+    return "Silakan coba lagi nanti, server sedang sibuk.";
+  }
+
+  return text;
+}
+
 // ---------------------------
 // Single message bubble (safe hooks)
 // ---------------------------
@@ -1024,35 +1194,23 @@ function MessageRow({
 }) {
   const captureRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
-
-  const kk = useMemo(() => parseKK(msg.result_text || ""), [msg.result_text]);
-  const generic = useMemo(
-    () => parseGeneric(msg.result_text || ""),
-    [msg.result_text],
-  );
-  const nikRecords = useMemo(
-    () => parsePopulationResult(msg.result_text || ""),
+  const safeText = useMemo(
+    () => normalizeServerText(msg.result_text),
     [msg.result_text],
   );
 
-  const isName = useMemo(
-    () => isNameResult(msg.result_text),
-    [msg.result_text],
-  );
-
+  const kk = useMemo(() => parseKK(safeText), [safeText]);
+  const generic = useMemo(() => parseGeneric(safeText), [safeText]);
+  const nikRecords = useMemo(() => parsePopulationResult(safeText), [safeText]);
+  const isName = useMemo(() => isNameResult(safeText), [safeText]);
   const nameRecords = useMemo(
-    () => (isName ? parseNameResult(msg.result_text || "") : []),
-    [msg.result_text, isName],
+    () => (isName ? parseNameResult(safeText) : []),
+    [safeText, isName],
   );
-
-  const isFR = useMemo(
-    () => isFaceRecognitionResult(msg.result_text),
-    [msg.result_text],
-  );
-
+  const isFR = useMemo(() => isFaceRecognitionResult(safeText), [safeText]);
   const frRecords = useMemo(
-    () => (isFR ? parseFaceRecognition(msg.result_text || "") : []),
-    [msg.result_text, isFR],
+    () => (isFR ? parseFaceRecognition(safeText) : []),
+    [safeText, isFR],
   );
 
   const hasKK = !!(kk.found && kk.members.length > 0);
@@ -1101,7 +1259,7 @@ function MessageRow({
     return (
       <div className="mt-2 rounded-xl overflow-hidden border border-white/10 bg-white/5">
         <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10">
-          Face Recognition Result
+          Hasil Face Recognition
         </div>
 
         <div className="overflow-x-auto">
@@ -1123,10 +1281,28 @@ function MessageRow({
                   <td className="px-3 py-2 font-semibold text-emerald-300">
                     {r.similarity || "-"}
                   </td>
-                  <td className="px-3 py-2 font-mono w-[125px]">
-                    {r.nik || "-"}
+                  <td className="px-3 py-2 font-mono w-[125px] whitespace-nowrap">
+                    {isValidSearchValue(r.nik) ? (
+                      <div className="flex items-center gap-2">
+                        <span className="tabular-nums select-all">{r.nik}</span>
+                        <CopyBadge value={r.nik!} fieldKey="NIK" />
+                      </div>
+                    ) : (
+                      "-"
+                    )}
                   </td>
-                  <td className="px-3 py-2">{r.nama || "-"}</td>
+
+                  <td className="px-3 py-2">
+                    {isValidSearchValue(r.nama) ? (
+                      <div className="flex items-center gap-2">
+                        <span>{r.nama}</span>
+                        <CopyBadge value={r.nama!} fieldKey="NAMA" />
+                      </div>
+                    ) : (
+                      "-"
+                    )}
+                  </td>
+
                   <td className="px-3 py-2">{r.ttl || "-"}</td>
                   <td className="px-3 py-2 break-words">{r.alamat || "-"}</td>
                 </tr>
@@ -1150,71 +1326,95 @@ function MessageRow({
         style={{ wordBreak: "break-word" }}
       >
         {(showKK || showNIK || showName) && (
-          <div className="absolute -top-3 right-2 flex gap-1">
+          <div className="absolute -top-4 -right-3 flex gap-1">
             <button
-              className="text-[10px] px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 border border-white/20"
+              type="button"
+              className="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20 border border-white/20 transition-all hover:scale-105 active:scale-95"
               onClick={(e) => {
                 e.stopPropagation();
                 copyAllLikeScreenshot();
               }}
-              title="Copy all text"
             >
-              {copied ? "Copied" : "Copy"}
+              {copied ? "Copied!" : "Copy"}
             </button>
           </div>
         )}
 
         {!showFR && (
           <div ref={captureRef}>
-            {showName ? (
-              <NameResultTable records={nameRecords} />
-            ) : showKK ? (
-              <KKFamilyTable nkk={kk.nkk} area={kk.area} members={kk.members} />
-            ) : showGeneric ? (
-              <div className="space-y-2">
-                {generic.queryPhone ? (
-                  <div className="text-xs text-white/90">
-                    <span className="text-white/70">Phone</span>:{" "}
-                    <span className="font-medium">{generic.queryPhone}</span>
-                  </div>
-                ) : null}
-                {generic.contact ? (
-                  <div className="text-xs text-white/90">
-                    <span className="text-white/70">Contact</span>:{" "}
-                    {generic.contact}
-                  </div>
-                ) : null}
-                {generic.regData ? (
-                  <div className="text-xs text-white/90">
-                    <span className="text-white/70">Reg Data</span>:{" "}
-                    {generic.regData}
-                  </div>
-                ) : null}
-                {generic.wallets ? (
-                  <WalletTable wallets={generic.wallets} />
-                ) : null}
-                {generic.people.length > 0 ? (
-                  <div className="mt-2">
-                    {generic.people.map((p, idx) => (
-                      <PersonRecordTable key={idx} person={p} index={idx} />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ) : showNIK ? (
-              <ParsedResult records={nikRecords} />
+            {isMe ? (
+              safeText && safeText.trim() !== "" ? (
+                <div className="whitespace-pre-wrap">{safeText}</div>
+              ) : msg.file_url ? (
+                <img
+                  src={msg.file_url}
+                  alt="User Upload"
+                  className="w-auto max-w-[300px] max-h-[300px] object-contain rounded-lg shadow-lg"
+                  onLoad={scrollSmart}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              ) : null
             ) : (
-              <div className="whitespace-pre-wrap">{msg.result_text}</div>
-            )}
+              <>
+                {showName ? (
+                  <NameResultTable records={nameRecords} />
+                ) : showKK ? (
+                  <KKFamilyTable
+                    nkk={kk.nkk}
+                    area={kk.area}
+                    members={kk.members}
+                  />
+                ) : showGeneric ? (
+                  <div className="space-y-2">
+                    {generic.queryPhone ? (
+                      <div className="text-xs text-white/90">
+                        <span className="text-white/70">Phone</span>:{" "}
+                        <span className="font-medium">
+                          {generic.queryPhone}
+                        </span>
+                      </div>
+                    ) : null}
+                    {generic.contact ? (
+                      <div className="text-xs text-white/90">
+                        <span className="text-white/70">Contact</span>:{" "}
+                        {generic.contact}
+                      </div>
+                    ) : null}
+                    {generic.regData ? (
+                      <div className="text-xs text-white/90">
+                        <span className="text-white/70">Reg Data</span>:{" "}
+                        {generic.regData}
+                      </div>
+                    ) : null}
+                    {generic.wallets ? (
+                      <WalletTable wallets={generic.wallets} />
+                    ) : null}
+                    {generic.people.length > 0 ? (
+                      <div className="mt-2">
+                        {generic.people.map((p, idx) => (
+                          <PersonRecordTable key={idx} person={p} index={idx} />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : showNIK ? (
+                  <ParsedResult records={nikRecords} />
+                ) : (
+                  <div className="whitespace-pre-wrap">{safeText}</div>
+                )}
 
-            {msg.mime_type === "image/jpeg" && (
-              <img
-                src={`${msg.file_url}`}
-                alt="Preview"
-                className="max-w-full rounded-lg shadow-lg mt-2"
-                onLoad={scrollSmart}
-                onClick={(e) => e.stopPropagation()}
-              />
+                {/* fallback image untuk bot */}
+                {msg.mime_type === "image/jpeg" && msg.file_url && (
+                  <img
+                    // key={msg.file_url}
+                    src={msg.file_url}
+                    alt="Preview"
+                    className="max-w-full rounded-lg shadow-lg mt-2"
+                    onLoad={scrollSmart}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                )}
+              </>
             )}
           </div>
         )}
@@ -1253,6 +1453,8 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   const [messages, setMessages] = useState<BotResult[]>([]);
 
   const listRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   const username = "saya";
 
   useEffect(() => {
@@ -1289,46 +1491,57 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   // socket stream -> append at bottom, filter intro, dedupe by id
   useEffect(() => {
     socket.emit("room:lobby:join", "");
+
     const handler = (msg: any) => {
       try {
         const parsed: BotResultSocket = JSON.parse(msg);
-        console.log("Received bot_msg via socket:", parsed);
+
+        if ("source_type" in parsed) return;
         if (isIntroText(parsed.result_text)) return;
+        if (parsed.result_from === "USER") return;
 
         const dataMsg: BotResult = {
           id: parsed.id,
           chat_id: parsed.chat_id,
           file_url: parsed.file_url,
-          message_id: 0,
+          message_id: parsed.message_id ?? parsed.chat_id,
           mime_type: parsed.mime_type,
           result_from: parsed.result_from,
           result_text: parsed.result_text,
           username: parsed.username,
-          created_at: parsed.created_at,
-          updated_at: parsed.updated_at,
+          created_at: parsed.created_at ?? new Date().toISOString(),
+          updated_at: parsed.updated_at ?? new Date().toISOString(),
         };
 
-        // console.log("dataMsg", dataMsg.result_text);
-
         setMessages((prev) => {
-          // if (prev.some((m) => m.id === dataMsg.id)) return prev; // dedupe
-          return [...prev, dataMsg]; // append to bottom
+          const exists = prev.some(
+            (m) =>
+              m.result_text === dataMsg.result_text &&
+              m.created_at === dataMsg.created_at,
+          );
+
+          if (exists) return prev;
+          return [...prev, dataMsg];
         });
       } catch (e) {
         console.error("Invalid JSON in bot_msg:", e);
       }
     };
     socket.on("bot_msg", handler);
+
     return () => {
       socket.off("bot_msg", handler);
     };
   }, []);
 
   const scrollSmart = useCallback(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const hasOverflow = el.scrollHeight > el.clientHeight + 4;
-    if (hasOverflow) el.scrollTop = el.scrollHeight; // stick to bottom
+    // const el = listRef.current;
+    // if (!el) return;
+    // const hasOverflow = el.scrollHeight > el.clientHeight + 4;
+    // if (hasOverflow) el.scrollTop = el.scrollHeight; // stick to bottom
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth", // atau "auto" kalau mau instant
+    });
   }, []);
 
   useEffect(() => {
@@ -1386,27 +1599,33 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         {/* remove justify-center so messages start at top and grow downward */}
         <div className="min-h-[100dvh] flex flex-col px-1 space-y-3">
           {messages
-            // .filter(
-            //   (msg) =>
-            //     (msg.result_text && msg.result_text.trim() !== "") ||
-            //     msg.mime_type === "image/jpeg",
-            // )
             .filter((msg, i, arr) => {
+              const hasText = msg.result_text && msg.result_text.trim() !== "";
               // tetap tampilkan image
-              if (msg.mime_type === "image/jpeg") return true;
-
-              // tidak ada text → skip
-              if (!msg.result_text || msg.result_text.trim() === "")
-                return false;
+              // if (msg.mime_type === "image/jpeg") return true;
 
               // helper filter
               if (shouldHideMessage(msg, i, arr)) return false;
+              // if (isHiddenText(msg.result_text)) return false;
+
+              if (hasText && isHiddenText(msg.result_text)) {
+                return false;
+              }
+
+              if (msg.mime_type === "image/jpeg") {
+                return true;
+              }
+
+              if (hasText) {
+                return true;
+              }
 
               return true;
             })
             /* IMPORTANT: no sort here—use state order */
             .map((msg, i) => {
-              const isMe = msg.username === username;
+              const isMe = msg.result_from === "USER";
+
               if (
                 msg.result_text?.includes("Mengirim permintaan") &&
                 i !== messages.length - 1
@@ -1415,13 +1634,14 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
               }
               return (
                 <MessageRow
-                  key={msg.id}
+                  key={`${msg.created_at}-${i}`}
                   msg={msg}
                   isMe={isMe}
                   scrollSmart={scrollSmart}
                 />
               );
             })}
+          <div ref={bottomRef} />
         </div>
       </div>
     </div>
