@@ -114,7 +114,7 @@ export default function ChatWrapper() {
       leftWidthMd="md:w-[260px] lg:w-[280px]"
     >
       {{
-        left: (
+        left: ({ closeSidebar }) => (
           <div
             className="w-full bg-cyber h-[100dvh] overflow-y-auto"
             aria-label="Chat list"
@@ -122,10 +122,14 @@ export default function ChatWrapper() {
             <Chat
               items={items}
               selectedId={selectedId}
-              onSelect={(item) => setSelectedId(item.id)}
+              onSelect={(item) => {
+                setSelectedId(item.id);
+                closeSidebar();
+              }}
             />
           </div>
         ),
+
         right: (
           <main className="flex-1 min-h-0 md:h-[100dvh] overflow-hidden">
             {selected?.type === "result" ? (
