@@ -514,6 +514,20 @@ const COMMAND_BY_KEY: Record<string, string> = {
   PHONE: "/reg",
 };
 
+function isValidSearchValue(val?: string | null): boolean {
+  if (!val) return false;
+
+  const v = val.trim();
+
+  if (!v) return false;
+  if (v === "-") return false;
+  if (v === "0") return false;
+  if (/^0+$/.test(v)) return false;
+  if (/^-+$/.test(v)) return false;
+
+  return true;
+}
+
 function CopyBadge({ value, fieldKey }: { value: string; fieldKey?: string }) {
   const dispatch = useDispatch<AppDispatch>();
   const [done, setDone] = useState(false);
@@ -530,7 +544,7 @@ function CopyBadge({ value, fieldKey }: { value: string; fieldKey?: string }) {
     }
 
     // 🔥 Trigger API berdasarkan fieldKey
-    if (fieldKey) {
+    if (fieldKey && isValidSearchValue(value)) {
       const command = COMMAND_BY_KEY[fieldKey.toUpperCase()];
       if (command) {
         dispatch(
@@ -679,7 +693,8 @@ function ResultRecordTable({
               "NOMOR",
             ];
 
-            const isCopyable = copyableKeys.includes(key) && val;
+            const isCopyable =
+              copyableKeys.includes(key) && isValidSearchValue(val);
 
             return (
               <tr key={key} className="odd:bg-white/0 even:bg-white/5">
@@ -827,7 +842,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
             {records.map((r, i) => (
               <tr key={r.NIK || i} className="odd:bg-white/0 even:bg-white/5">
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {r.NIK ? (
+                  {isValidSearchValue(r.NIK) ? (
                     <div className="flex items-center gap-2">
                       <span className="font-mono tabular-nums">{r.NIK}</span>
                       <CopyBadge value={r.NIK} fieldKey="NIK" />
@@ -838,7 +853,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
                 </td>
 
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {r.NKK ? (
+                  {isValidSearchValue(r.NKK) ? (
                     <div className="flex items-center gap-2">
                       <span className="font-mono tabular-nums">{r.NKK}</span>
                       <CopyBadge value={r.NKK} fieldKey="NKK" />
@@ -849,7 +864,7 @@ function NameResultTable({ records }: { records: ParsedRecord[] }) {
                 </td>
 
                 <td className="px-3 py-2">
-                  {r.NAMA ? (
+                  {isValidSearchValue(r.NAMA) ? (
                     <div className="flex items-center gap-2">
                       <span>{r.NAMA}</span>
                       <CopyBadge value={r.NAMA} fieldKey="NAMA" />
@@ -893,10 +908,10 @@ function KKFamilyTable({
       <div className="px-3 py-2 text-[11px] uppercase tracking-wider bg-white/10 flex items-center justify-between">
         <div>
           <div className="font-semibold">Kartu Keluarga</div>
-          {nkk ? (
+          {isValidSearchValue(nkk) ? (
             <div className="text-[11px] mt-1">
               NKK: <span className="font-medium">{nkk}</span>{" "}
-              <CopyBadge value={nkk} fieldKey="NKK" />
+              <CopyBadge value={nkk!} fieldKey="NKK" />
             </div>
           ) : null}
         </div>
@@ -940,14 +955,16 @@ function KKFamilyTable({
                     >
                       {m.NIK || "-"}
                     </span>
-                    {m.NIK ? <CopyBadge value={m.NIK} fieldKey="NIK" /> : null}
+                    {isValidSearchValue(m.NIK) ? (
+                      <CopyBadge value={m.NIK!} fieldKey="NIK" />
+                    ) : null}
                   </div>
                 </td>
                 <td className="px-3 py-2">
-                  {m.NAMA_LENGKAP ? (
+                  {isValidSearchValue(m.NAMA_LENGKAP) ? (
                     <div className="flex items-center gap-2">
                       <span>{m.NAMA_LENGKAP}</span>
-                      <CopyBadge value={m.NAMA_LENGKAP} fieldKey="NAMA" />
+                      <CopyBadge value={m.NAMA_LENGKAP!} fieldKey="NAMA" />
                     </div>
                   ) : (
                     "-"
@@ -964,22 +981,22 @@ function KKFamilyTable({
                 <td className="px-3 py-2">{m.PEKERJAAN || "-"}</td>
 
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {m.NIK_IBU ? (
+                  {isValidSearchValue(m.NIK_IBU) ? (
                     <div className="flex items-center gap-2 min-w-fit">
                       <span className="font-mono tabular-nums">
                         {m.NIK_IBU}
                       </span>
-                      <CopyBadge value={m.NIK_IBU} fieldKey="NIK IBU" />
+                      <CopyBadge value={m.NIK_IBU!} fieldKey="NIK IBU" />
                     </div>
                   ) : (
                     "-"
                   )}
                 </td>
                 <td className="px-3 py-2">
-                  {m.NAMA_IBU ? (
+                  {isValidSearchValue(m.NAMA_IBU) ? (
                     <div className="flex items-center gap-2">
                       <span>{m.NAMA_IBU}</span>
-                      <CopyBadge value={m.NAMA_IBU} fieldKey="NAMA IBU" />
+                      <CopyBadge value={m.NAMA_IBU!} fieldKey="NAMA IBU" />
                     </div>
                   ) : (
                     "-"
@@ -987,22 +1004,22 @@ function KKFamilyTable({
                 </td>
 
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {m.NIK_AYAH ? (
+                  {isValidSearchValue(m.NIK_AYAH) ? (
                     <div className="flex items-center gap-2 min-w-fit">
                       <span className="font-mono tabular-nums">
                         {m.NIK_AYAH}
                       </span>
-                      <CopyBadge value={m.NIK_AYAH} fieldKey="NIK AYAH" />
+                      <CopyBadge value={m.NIK_AYAH!} fieldKey="NIK AYAH" />
                     </div>
                   ) : (
                     "-"
                   )}
                 </td>
                 <td className="px-3 py-2 min-w-[180px]">
-                  {m.NAMA_AYAH ? (
+                  {isValidSearchValue(m.NAMA_AYAH) ? (
                     <div className="flex items-center gap-2">
                       <span>{m.NAMA_AYAH}</span>
-                      <CopyBadge value={m.NAMA_AYAH} fieldKey="NAMA AYAH" />
+                      <CopyBadge value={m.NAMA_AYAH!} fieldKey="NAMA AYAH" />
                     </div>
                   ) : (
                     "-"
@@ -1258,10 +1275,10 @@ function MessageRow({
                     {r.similarity || "-"}
                   </td>
                   <td className="px-3 py-2 font-mono w-[125px] whitespace-nowrap">
-                    {r.nik ? (
+                    {isValidSearchValue(r.nik) ? (
                       <div className="flex items-center gap-2">
                         <span className="tabular-nums select-all">{r.nik}</span>
-                        <CopyBadge value={r.nik} fieldKey="NIK" />
+                        <CopyBadge value={r.nik!} fieldKey="NIK" />
                       </div>
                     ) : (
                       "-"
@@ -1269,10 +1286,10 @@ function MessageRow({
                   </td>
 
                   <td className="px-3 py-2">
-                    {r.nama ? (
+                    {isValidSearchValue(r.nama) ? (
                       <div className="flex items-center gap-2">
                         <span>{r.nama}</span>
-                        <CopyBadge value={r.nama} fieldKey="NAMA" />
+                        <CopyBadge value={r.nama!} fieldKey="NAMA" />
                       </div>
                     ) : (
                       "-"
