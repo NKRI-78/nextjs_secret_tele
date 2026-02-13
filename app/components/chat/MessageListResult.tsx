@@ -1495,25 +1495,20 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   // socket stream -> append at bottom, filter intro, dedupe by id
   useEffect(() => {
     socket.emit("room:lobby:join", "");
+
     const handler = (msg: any) => {
       try {
         const parsed: BotResultSocket = JSON.parse(msg);
-        console.log("Received bot_msg via socket:", parsed);
 
         if ("source_type" in parsed) return;
         if (isIntroText(parsed.result_text)) return;
-
-        // ✅ TAMBAHKAN DI SINI
-        if (parsed.mime_type?.toLowerCase().startsWith("image")) {
-          dispatch(chatMessageListResultAsync());
-          return; // stop supaya tidak dobel append
-        }
+        if (parsed.result_from === "USER") return;
 
         const dataMsg: BotResult = {
           id: parsed.id,
           chat_id: parsed.chat_id,
           file_url: parsed.file_url,
-          message_id: 0,
+          message_id: parsed.message_id ?? parsed.chat_id,
           mime_type: parsed.mime_type,
           result_from: parsed.result_from,
           result_text: parsed.result_text,
@@ -1522,21 +1517,28 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
           updated_at: parsed.updated_at ?? new Date().toISOString(),
         };
 
-        // console.log("dataMsg", dataMsg.result_text);
-
         setMessages((prev) => {
-          // if (prev.some((m) => m.id === dataMsg.id)) return prev; // dedupe
-          return [...prev, dataMsg]; // append to bottom
+          const exists = prev.some(
+            (m) =>
+              m.result_text === dataMsg.result_text &&
+              m.created_at === dataMsg.created_at,
+          );
+
+          if (exists) return prev;
+
+          return [...prev, dataMsg];
         });
       } catch (e) {
         console.error("Invalid JSON in bot_msg:", e);
       }
     };
+
     socket.on("bot_msg", handler);
+
     return () => {
       socket.off("bot_msg", handler);
     };
-  }, [dispatch]);
+  }, []);
 
   const scrollSmart = useCallback(() => {
     const el = listRef.current;
@@ -1644,7 +1646,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
               }
               return (
                 <MessageRow
-                  key={msg.id}
+                  key={`${msg.created_at}-${i}`}
                   msg={msg}
                   isMe={isMe}
                   scrollSmart={scrollSmart}
