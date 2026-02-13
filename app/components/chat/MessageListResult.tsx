@@ -49,7 +49,7 @@ function isHiddenText(text?: string | null): boolean {
     "format command salah",
     "terima kasih atas pesannya",
     "userbot aktif otomatis",
-    "server maintenance",
+    // "server maintenance",
   ];
 
   return hiddenKeywords.some((keyword) => s.includes(keyword));
@@ -1168,6 +1168,18 @@ function buildExportText({
   return stripCodeFence(raw || "");
 }
 
+function normalizeServerText(text?: string | null): string {
+  if (!text) return "";
+
+  const lower = text.toLowerCase();
+
+  if (lower.includes("server maintenance")) {
+    return "Silakan coba lagi nanti, server sedang sibuk.";
+  }
+
+  return text;
+}
+
 // ---------------------------
 // Single message bubble (safe hooks)
 // ---------------------------
@@ -1182,35 +1194,23 @@ function MessageRow({
 }) {
   const captureRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
-
-  const kk = useMemo(() => parseKK(msg.result_text || ""), [msg.result_text]);
-  const generic = useMemo(
-    () => parseGeneric(msg.result_text || ""),
-    [msg.result_text],
-  );
-  const nikRecords = useMemo(
-    () => parsePopulationResult(msg.result_text || ""),
+  const safeText = useMemo(
+    () => normalizeServerText(msg.result_text),
     [msg.result_text],
   );
 
-  const isName = useMemo(
-    () => isNameResult(msg.result_text),
-    [msg.result_text],
-  );
-
+  const kk = useMemo(() => parseKK(safeText), [safeText]);
+  const generic = useMemo(() => parseGeneric(safeText), [safeText]);
+  const nikRecords = useMemo(() => parsePopulationResult(safeText), [safeText]);
+  const isName = useMemo(() => isNameResult(safeText), [safeText]);
   const nameRecords = useMemo(
-    () => (isName ? parseNameResult(msg.result_text || "") : []),
-    [msg.result_text, isName],
+    () => (isName ? parseNameResult(safeText) : []),
+    [safeText, isName],
   );
-
-  const isFR = useMemo(
-    () => isFaceRecognitionResult(msg.result_text),
-    [msg.result_text],
-  );
-
+  const isFR = useMemo(() => isFaceRecognitionResult(safeText), [safeText]);
   const frRecords = useMemo(
-    () => (isFR ? parseFaceRecognition(msg.result_text || "") : []),
-    [msg.result_text, isFR],
+    () => (isFR ? parseFaceRecognition(safeText) : []),
+    [safeText, isFR],
   );
 
   const hasKK = !!(kk.found && kk.members.length > 0);
@@ -1343,8 +1343,8 @@ function MessageRow({
         {!showFR && (
           <div ref={captureRef}>
             {isMe ? (
-              msg.result_text && msg.result_text.trim() !== "" ? (
-                <div className="whitespace-pre-wrap">{msg.result_text}</div>
+              safeText && safeText.trim() !== "" ? (
+                <div className="whitespace-pre-wrap">{safeText}</div>
               ) : msg.file_url ? (
                 <img
                   src={msg.file_url}
@@ -1400,7 +1400,7 @@ function MessageRow({
                 ) : showNIK ? (
                   <ParsedResult records={nikRecords} />
                 ) : (
-                  <div className="whitespace-pre-wrap">{msg.result_text}</div>
+                  <div className="whitespace-pre-wrap">{safeText}</div>
                 )}
 
                 {/* fallback image untuk bot */}

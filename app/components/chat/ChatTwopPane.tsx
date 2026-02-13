@@ -2,8 +2,6 @@
 
 import { Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-// import Cookies from "js-cookie";
-// import { useRouter } from "next/navigation";
 
 import { useDispatch } from "react-redux";
 import { AppDispatch } from "@redux/store";
@@ -20,8 +18,7 @@ type Props = {
   leftWidthMd?: string;
   /** Content slots */
   children: {
-    left: React.ReactNode;
-    // right: React.ReactNode;
+    left: (props: { closeSidebar: () => void }) => React.ReactNode;
     right: React.ReactNode;
     rightHeader?: (props: {
       open: boolean;
@@ -48,6 +45,12 @@ export default function ResponsiveTwoPane({
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const [openLogout, setOpenLogout] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
+  const closeSidebar = () => {
+    if (window.innerWidth < 768) {
+      setOpen(false);
+      setOpenLogout(false);
+    }
+  };
 
   // Close the drawer when pressing Escape
   useEffect(() => {
@@ -129,7 +132,7 @@ export default function ResponsiveTwoPane({
         `}
         aria-label={leftLabel}
       >
-        {open && children.left}
+        {open && children.left({ closeSidebar })}
       </aside>
 
       {/* Mobile left pane (off-canvas) */}
@@ -210,7 +213,7 @@ export default function ResponsiveTwoPane({
           </button>
         </div>
         <div className="h-[calc(100dvh-3rem)] overflow-y-auto">
-          {children.left}
+          {children.left({ closeSidebar })}
         </div>
       </div>
 
