@@ -1174,7 +1174,7 @@ function normalizeServerText(text?: string | null): string {
   const lower = text.toLowerCase();
 
   if (lower.includes("server maintenance")) {
-    return "Silakan coba lagi nanti, server sedang sibuk.";
+    return "Pencarian Face Recognition sedang dalam perbaikan. Mohon Coba beberapa saat lagi.";
   }
 
   return text;

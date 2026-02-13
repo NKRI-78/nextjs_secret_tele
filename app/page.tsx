@@ -3,8 +3,8 @@ import ChatWrapper from "./components/chat/ChatWrapper";
 import HomeResult from "./components/v2/home/HomeResult";
 
 export const metadata: Metadata = {
-  title: "Bot",
-  description: "Bot",
+  title: "Identera",
+  description: "identera",
 };
 
 export default function HomePage() {
