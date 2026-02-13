@@ -31,21 +31,28 @@ function isHiddenText(text?: string | null): boolean {
 
   const s = text.replace(/\s+/g, " ").trim().toLowerCase();
 
-  return (
-    s.includes("foto fr berhasil dikirim!") ||
-    s.includes("pastikan struktur wajah terang dan jelas") ||
-    s.includes("please wait") ||
-    s.includes("foto fr v1 diterima!") ||
-    s.includes("pesan berhasil dikirim.") ||
-    s.includes("pilih fitur:") ||
-    s.includes("on proses") ||
-    s.includes("silakan pilih dan kirim foto dari galeri anda") ||
-    s.includes("mengirim") ||
-    s.includes("akses cp digunakan sebanyak 3 kali hari ini. tunggu proses") ||
-    s.includes("has been sent, don't spam.") ||
-    s.includes("format command salah") ||
-    s.includes("terima kasih atas pesannya")
-  );
+  const hiddenKeywords = [
+    "foto fr berhasil dikirim!",
+    "pastikan struktur wajah terang dan jelas",
+    "please wait",
+    "foto fr v1 diterima!",
+    "pesan berhasil dikirim.",
+    "pilih fitur:",
+    "on proses",
+    "silakan pilih dan kirim foto dari galeri anda",
+    "mengirim",
+    "akses cp digunakan sebanyak 1 kali hari ini. tunggu proses",
+    "akses cp digunakan sebanyak 2 kali hari ini. tunggu proses",
+    "akses cp digunakan sebanyak 3 kali hari ini. tunggu proses",
+    "akses cp digunakan sebanyak 4 kali hari ini. tunggu proses",
+    "has been sent, don't spam.",
+    "format command salah",
+    "terima kasih atas pesannya",
+    "userbot aktif otomatis",
+    "server maintenance",
+  ];
+
+  return hiddenKeywords.some((keyword) => s.includes(keyword));
 }
 
 // ---------------------------
@@ -1322,13 +1329,7 @@ function MessageRow({
           <div className="absolute -top-4 -right-3 flex gap-1">
             <button
               type="button"
-              className="
-    px-2 py-1 text-[11px] rounded-md
-    bg-white/10 hover:bg-white/20
-    border border-white/20
-    transition-all
-    hover:scale-105 active:scale-95
-  "
+              className="px-2 py-1 text-[11px] rounded-md bg-white/10 hover:bg-white/20 border border-white/20 transition-all hover:scale-105 active:scale-95"
               onClick={(e) => {
                 e.stopPropagation();
                 copyAllLikeScreenshot();
@@ -1348,14 +1349,7 @@ function MessageRow({
                 <img
                   src={msg.file_url}
                   alt="User Upload"
-                  className="
-    w-auto
-    max-w-[300px]
-    max-h-[300px]
-    object-contain
-    rounded-lg
-    shadow-lg
-  "
+                  className="w-auto max-w-[300px] max-h-[300px] object-contain rounded-lg shadow-lg"
                   onLoad={scrollSmart}
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -1459,6 +1453,8 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   const [messages, setMessages] = useState<BotResult[]>([]);
 
   const listRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
   const username = "saya";
 
   useEffect(() => {
@@ -1525,14 +1521,12 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
           );
 
           if (exists) return prev;
-
           return [...prev, dataMsg];
         });
       } catch (e) {
         console.error("Invalid JSON in bot_msg:", e);
       }
     };
-
     socket.on("bot_msg", handler);
 
     return () => {
@@ -1541,10 +1535,13 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
   }, []);
 
   const scrollSmart = useCallback(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const hasOverflow = el.scrollHeight > el.clientHeight + 4;
-    if (hasOverflow) el.scrollTop = el.scrollHeight; // stick to bottom
+    // const el = listRef.current;
+    // if (!el) return;
+    // const hasOverflow = el.scrollHeight > el.clientHeight + 4;
+    // if (hasOverflow) el.scrollTop = el.scrollHeight; // stick to bottom
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth", // atau "auto" kalau mau instant
+    });
   }, []);
 
   useEffect(() => {
@@ -1602,23 +1599,14 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
         {/* remove justify-center so messages start at top and grow downward */}
         <div className="min-h-[100dvh] flex flex-col px-1 space-y-3">
           {messages
-            // .filter(
-            //   (msg) =>
-            //     (msg.result_text && msg.result_text.trim() !== "") ||
-            //     msg.mime_type === "image/jpeg",
-            // )
             .filter((msg, i, arr) => {
-              // tetap tampilkan image
               const hasText = msg.result_text && msg.result_text.trim() !== "";
+              // tetap tampilkan image
               // if (msg.mime_type === "image/jpeg") return true;
 
               // helper filter
               if (shouldHideMessage(msg, i, arr)) return false;
               // if (isHiddenText(msg.result_text)) return false;
-
-              // if (!hasText && msg.mime_type !== "image/jpeg") {
-              //   return false;
-              // }
 
               if (hasText && isHiddenText(msg.result_text)) {
                 return false;
@@ -1653,6 +1641,7 @@ const MessageListResult = ({ selected }: { selected: ChatItem | null }) => {
                 />
               );
             })}
+          <div ref={bottomRef} />
         </div>
       </div>
     </div>
